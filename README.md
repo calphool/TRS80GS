@@ -14,7 +14,7 @@ I did a couple of snow-field type demos, but it looks more like slowly falling b
 The TRS-80 uses these goofy ["pseudographics" characters (2 by 3 grids)](https://www.classic-computers.org.nz/system-80/manuals_tm3_page33.jpg), 
 and you have to do everything by selecting the right "character" in order to plot these huge blocky pixels.  Your resolution is effectively 128 x 48, and 
 it's a pain to work with, because you're actually manipulating a 64 x 16 text grid.  I wrote some assembler code so that I could at least *address* 
-the TRS-80 Model 1 screen *as if* it had 128 x 48 resolution, which I've included in this repo.
+the TRS-80 Model 1 screen *as if* it had 128 x 48 resolution, which I've included in this repo (see the snow.asm code, it's the FSETGR routine).
 
 Eventually the day came that I thought "Ok, I'm going to try to write a game for this nasty old thing."  I *really* wanted 
 graphics, sound, and a joystick, but alas that wasn't really in the cards for an unmodified TRS-80 Model 1.  So I began 
@@ -28,6 +28,10 @@ It also includes two SN76489 sound chips (also from TI-99/4A, but *better* becau
 I've also included a 74LS244 on the bus attached to an Atari 2600 joystick port (DB9), which in theory will give me the 
 ability to poll for joystick condition.  That may end up being a bad design, since it's not using any interrupts, but I 
 figured I'd start simple and if I need to implement interrupts I'll have to dig into how the TRS-80 deals with them.
+
+**Be Aware**:  I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
+I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
+"40 year old museum piece" while I figure out how to get the glue code working properly.
 
 Theory of Operation
 ===================
