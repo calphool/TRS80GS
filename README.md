@@ -11,9 +11,9 @@ started hacking a TRS-80 emulator, and eventually got somewhat comfortable with 
 tried to do some graphics stuff, but *man*, TRS-80 Model 1's *barely* have the ability to do anything you'd call "graphics." 
 I did a couple of snow-field type demos, but it looks more like slowly falling bricks on some low-gravity planet than snow.
 
-The TRS-80 uses these goofy ["pseudographics" characters (2 by 3 grids)](https://www.classic-computers.org.nz/system-80/manuals_tm3_page33.jpg), and you have to do everything by selecting the right 
-"character" in order to plot these huge blocky pixels.  Your resolution is effectively 128 x 48, and it's a pain to work with,
-because you're actually manipulating a 64 x 16 text grid.  I wrote some assembler code so that I could at least *address* 
+The TRS-80 uses these goofy ["pseudographics" characters (2 by 3 grids)](https://www.classic-computers.org.nz/system-80/manuals_tm3_page33.jpg), 
+and you have to do everything by selecting the right "character" in order to plot these huge blocky pixels.  Your resolution is effectively 128 x 48, and 
+it's a pain to work with, because you're actually manipulating a 64 x 16 text grid.  I wrote some assembler code so that I could at least *address* 
 the TRS-80 Model 1 screen *as if* it had 128 x 48 resolution, which I've included in this repo.
 
 Eventually the day came that I thought "Ok, I'm going to try to write a game for this nasty old thing."  I *really* wanted 
