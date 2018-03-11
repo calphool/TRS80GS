@@ -22,28 +22,28 @@
                 00022 ; *          C.  Draw pixel
                 00023 ; *****************************************************************
                 00024 ;
-                00025 ; ----------------------------------------
-                00026 ; |  Clear screen                        |
-                00027 ; ----------------------------------------  
+                00025 ; ----------------------------------------------------------------
+                00026 ; |  Clear screen                                                |
+                00027 ; ----------------------------------------------------------------
 5200  21003C    00028 ENTRY   LD     HL,VIDEO       ; put VIDEO RAM address into HL register
 5203  11013C    00029         LD     DE,VIDEO+1     ; put VIDEO RAM address +1 into DE 
-5206  010004    00030         LD     BC,400H        ; put counter into BC 
+5206  01FF03    00030         LD     BC,3FFH        ; put counter into BC 
 5209  3680      00031         LD     (HL),10000000b ; put ascii 128 into video location
 520B  EDB0      00032         LDIR                  ; run fast memory copy
                 00033 ;
                 00034 ; ----------------------------------------------------------------
                 00035 ; |  Setup random number seed                                    |
                 00036 ; ----------------------------------------------------------------
-520D  CD4A54    00037         CALL   RANDSD         ; set up the random number seed
+520D  CD2554    00037         CALL   RANDSD         ; set up the random number seed
                 00038 
                 00039 ;
                 00040 ; ----------------------------------------------------------------
                 00041 ; |  Load up XS array with random values from 0 - 127            |
                 00042 ; ----------------------------------------------------------------
 5210  0680      00043         LD     B,128          ; do this loop 128 times
-5212  DD216954  00044         LD     IX, XS         ; store the address of XS in IX
-                00045 L1:
-5216  CD5754    00046         CALL   RANDR          ; get random number for A
+5212  DD21F954  00044         LD     IX, XS         ; store the address of XS in IX
+                00045 L1
+5216  CD3254    00046         CALL   RANDR          ; get random number for A
 5219  CB2F      00047         SRA    A              ; divide A by 2 (0 - 127)
 521B  E67F      00048         AND    01111111b
 521D  DD7700    00049         LD     (IX),A         ; store random number in address pointed by IX
@@ -55,15 +55,15 @@
                 00055 ; |  Load up YS array with random values from 0 - 47             |
                 00056 ; ----------------------------------------------------------------
 5224  0680      00057         LD     B,128
-5226  DD21E954  00058         LD     IX, YS
-                00059 L2:
-522A  CD5754    00060         CALL   RANDR          ; get random number for A
+5226  DD217955  00058         LD     IX, YS
+                00059 L2
+522A  CD3254    00060         CALL   RANDR          ; get random number for A
 522D  CB2F      00061         SRA    A              ; >> 1 (/2) (256 = 128)
 522F  E67F      00062         AND    01111111b      ; make sure to get rid of left most digit
 5231  CB2F      00063         SRA    A              ; >> 1 (/2) (128 = 64)
 5233  CB2F      00064         SRA    A              ; >> 1 (/2) (64  = 32)
 5235  4F        00065         LD     C,A            ; put this in C temporarily
-5236  CD5754    00066         CALL   RANDR          ; get another random number
+5236  CD3254    00066         CALL   RANDR          ; get another random number
 5239  CB2F      00067         SRA    A              ; >> 1 (/2) (256 = 128)
 523B  E67F      00068         AND    01111111b      ; make sure to get rid of left most digit
 523D  CB2F      00069         SRA    A              ; >> 1 (/2) (128 = 64)
@@ -79,9 +79,9 @@
                 00079 ; |  Load up XINCS array with random values from 0 - 3           |
                 00080 ; ----------------------------------------------------------------
 524B  0604      00081         LD     B,4            ; set B to 4
-524D  DD216955  00082         LD     IX, XINCS      ; set IX to the memory location of XINCS[0]
-                00083 L3:
-5251  CD5754    00084         CALL   RANDR          ; get random numer for A
+524D  DD21F955  00082         LD     IX, XINCS      ; set IX to the memory location of XINCS[0]
+                00083 L3
+5251  CD3254    00084         CALL   RANDR          ; get random numer for A
 5254  0E03      00085         LD     C,3            ; set C to 3
 5256  A1        00086         AND    C              ; bitwise AND random value with 3 (meaning random number 0 - 3)
 5257  DD7700    00087         LD     (IX),A         ; put 1 - 3 value to memory pointed to by IX (XINCS[B])
@@ -93,9 +93,9 @@
                 00093 ; |  Load up YINCS array with random values from 1 - 3           |
                 00094 ; ----------------------------------------------------------------
 525E  0604      00095         LD     B,4            ; set B to 4
-5260  DD216D55  00096         LD     IX, YINCS      ; set IX to memory location of YINCS[0]
-                00097 L4:
-5264  CD5754    00098         CALL   RANDR          ; get random number for A
+5260  DD21FD55  00096         LD     IX, YINCS      ; set IX to memory location of YINCS[0]
+                00097 L4 
+5264  CD3254    00098         CALL   RANDR          ; get random number for A
 5267  0E02      00099         LD     C,2            ; set C to 2
 5269  A1        00100         AND    C              ; AND A with 2, giving a random number from 0 - 2 in A
 526A  3C        00101         INC    A              ; add 1 to A
@@ -104,328 +104,396 @@
 5270  10F2      00104         DJNZ   L4             ; subtract 1 from B and jump back to L4 if B > 0
                 00105 
                 00106 
-                00107 ;
-                00108 ; ----------------------------------------------------------------
-                00109 ; |  Main loop                                                   |
-                00110 ; ----------------------------------------------------------------
-                00111 MAIN    
-                00112 
-                00113 ;
-                00114 ; ----------------------------------------------------------------
-                00115 ; |  Iterate over current positions and "unset" them so          |
-                00116 ; |  that they disappear.                                        |
+5272  DD214454  00107         LD     IX,FSETGR
+5276  DD220256  00108         LD     (PARMBLK),IX   ; set PARMBLK to point to graphics function
+                00109 
+                00110 ;
+                00111 ; ----------------------------------------------------------------
+                00112 ; |  Main loop                                                   |
+                00113 ; ----------------------------------------------------------------
+                00114 MAIN    
+                00115 
+                00116 ;
                 00117 ; ----------------------------------------------------------------
-5272  0680      00118         LD     B,128          ; Loop over all 128 snowflake positions
-                00119 L5:            
-5274  DD216954  00120         LD     IX,XS          ; put the address of XS array into IX
-5278  1600      00121         LD     D,0            ; D = 0
-527A  58        00122         LD     E,B            ; E = B (put loop counter into a 16 bit register)
-527B  DD19      00123         ADD    IX,DE          ; DE to IX, making IX point to an array instance
-527D  DD4E00    00124         LD     C,(IX)         ; C now contains the X position for a flake
-                00125 
-5280  DD21E954  00126         LD     IX,YS          ; put the address of YS array into IX
-5284  1600      00127         LD     D,0            ; D = 0
-5286  58        00128         LD     E,B            ; E = B (put loop counter into a 16 bit register)
-5287  DD19      00129         ADD    IX,DE          ; DE to IX, making IX point to an array instance
-5289  DD5600    00130         LD     D,(IX)         ; D now contains the Y position for a flake
-528C  59        00131         LD     E,C            ; move C (current X position) to E
-528D  C5        00132         PUSH   BC             ; push BC onto the stack so we can loop inside UNSETGR
-528E  CD0D54    00133         CALL   UNSETGR        ; call routine to unset (black out) a pixel
-5291  C1        00134         POP    BC             ; pop BC back from the stack
-                00135 
-                00136 ;
-                00137 ; ----------------------------------------------------------------
-                00138 ; |  Put current main loop iterator into A register              |
-                00139 ; |  Jump to specific locations based on where we are in the     |
-                00140 ; |  main loop (this is how we form the 4 planes of flakes       |
-                00141 ; ----------------------------------------------------------------
-5292  78        00142         LD     A,B
-5293  FE20      00143         CP     32             ; B < 32?
-5295  DA9853    00144         JP     C,LS32         ; yes, plane 4
-5298  FE40      00145         CP     64             ; B < 64?
-529A  DA4453    00146         JP     C,LS64         ; yes, plane 3
-529D  FE60      00147         CP     96             ; B < 96?
-529F  DAF352    00148         JP     C,LS96         ; yes, plane 2
-                00149                               
-                00150 LS128:                        ;      plane 1
-52A2  DD216955  00151         LD     IX, XINCS      ; Load address of XINCS into IX
-52A6  1600      00152         LD     D,0            ; D = 0
-52A8  1E00      00153         LD     E,0            ; E = 0
-52AA  DD19      00154         ADD    IX, DE         ; IX now contains address of XINCS[0]
-52AC  FD216954  00155         LD     IY, XS         ; Load XS array address into IY
-52B0  1600      00156         LD     D,0            ; D = 0
-52B2  58        00157         LD     E,B            ; E = main loop counter (flake number)
-52B3  FD19      00158         ADD    IY, DE         ; IY now contains address of XS[B]
-52B5  DD7E00    00159         LD     A,(IX)         ; Load XINCS[0] into A
-52B8  FD4E00    00160         LD     C,(IY)         ; Load XS[B] into C
-52BB  81        00161         ADD    A,C            ; A now contains value we want (XINCS[0]), add it to XS[B]
-52BC  FE80      00162         CP     128            ; Is flake X position > 128 now?
-52BE  D2C452    00163         JP     NC,TOBIG1      ; Yes, go do something about it
-52C1  C3C652    00164         JP     OK1            ; Nope, it's fine, jump over this stuff 
-52C4  D680      00165 TOBIG1: SUB    128            ; Since it was too big
-52C6  FD7700    00166 OK1:    LD     (IY),A         ; Put newly computed XS[B] back into memory
-                00167 
-52C9  DD216D55  00168         LD     IX, YINCS      ; Load address of YINCS into IX
-52CD  1600      00169         LD     D,0            ; D = 0
-52CF  1E00      00170         LD     E,0            ; E = 0
-52D1  DD19      00171         ADD    IX, DE         ; IX now contains address of YINCS[0]
-52D3  FD21E954  00172         LD     IY, YS         ; Load YS array address into IY
-52D7  1600      00173         LD     D,0            ; D = 0
-52D9  58        00174         LD     E,B            ; E = main loop counter (flake number)
-52DA  FD19      00175         ADD    IY, DE         ; IY now contains address of YS[B]
-52DC  DD7E00    00176         LD     A,(IX)         ; Load YINCS[0] into A
-52DF  FD4E00    00177         LD     C,(IY)         ; Load YS[B] into C
-52E2  81        00178         ADD    A,C            ; A now contains value we want (YINCS[0]), add it to YS[B]
-52E3  FE30      00179         CP     48             ; Is flake X position > 48 now?
-52E5  D2EB52    00180         JP     NC,TOBIG2      ; Yes, go do something about it
-52E8  C3ED52    00181         JP     OK2            ; Nope, it's fine, jump over this stuff 
-52EB  D630      00182 TOBIG2: SUB    48             ; Since it was too big
-52ED  FD7700    00183 OK2:    LD     (IY),A         ; Put newly computed YS[B] back into memory
-52F0  C3E653    00184         JP     JOIN           ; Okay, we've set the XS[B] and YS[B] to their new values
-                00185 
-                00186                               ; this block is the same as the above, just plane 2 (DE set to 1)
-52F3  DD216955  00187 LS96:   LD     IX, XINCS
-52F7  1600      00188         LD     D,0
-52F9  1E01      00189         LD     E,1
-52FB  DD19      00190         ADD    IX, DE  
-52FD  FD216954  00191         LD     IY, XS
-5301  1600      00192         LD     D,0
-5303  58        00193         LD     E,B
-5304  FD19      00194         ADD    IY, DE   
-5306  DD7E00    00195         LD     A,(IX)
-5309  FD4E00    00196         LD     C,(IY)
-530C  81        00197         ADD    A,C    
-530D  FE80      00198         CP     128
-530F  D21553    00199         JP     NC,TOBIG3
-5312  C31753    00200         JP     OK3
-5315  D680      00201 TOBIG3: SUB    128 
-5317  FD7700    00202 OK3:    LD     (IY),A
-                00203 
-531A  DD216D55  00204         LD     IX, YINCS
-531E  1600      00205         LD     D,0
-5320  1E01      00206         LD     E,1
-5322  DD19      00207         ADD    IX, DE   
-5324  FD21E954  00208         LD     IY, YS
-5328  1600      00209         LD     D,0
-532A  58        00210         LD     E,B
-532B  FD19      00211         ADD    IY, DE 
-532D  DD7E00    00212         LD     A,(IX)
-5330  FD4E00    00213         LD     C,(IY)
-5333  81        00214         ADD    A,C  
-5334  FE30      00215         CP     48
-5336  D23C53    00216         JP     NC,TOBIG4
-5339  C33E53    00217         JP     OK4
-533C  D630      00218 TOBIG4: SUB    48 
-533E  FD7700    00219 OK4:    LD     (IY),A                      
-5341  C3E653    00220         JP     JOIN
-                00221 
-                00222                               ; this block is the same as the above, just plane 3 (DE set to 2)
-5344  DD216955  00223 LS64:   LD     IX, XINCS
-5348  1600      00224         LD     D,0
-534A  1E02      00225         LD     E,2
-534C  DD19      00226         ADD    IX, DE   
-534E  FD216954  00227         LD     IY, XS
-5352  1600      00228         LD     D,0
-5354  58        00229         LD     E,B
-5355  FD19      00230         ADD    IY, DE  
-5357  DD7E00    00231         LD     A,(IX)
-535A  FD4E00    00232         LD     C,(IY)
-535D  81        00233         ADD    A,C      
-535E  FE80      00234         CP     128
-5360  D26653    00235         JP     NC,TOBIG5
-5363  C36853    00236         JP     OK5        
-5366  D680      00237 TOBIG5: SUB    128 
-5368  FD7700    00238 OK5:    LD     (IY),A
-                00239        
-536B  DD216D55  00240         LD     IX, YINCS
-536F  1600      00241         LD     D,0
-5371  1E02      00242         LD     E,2
-5373  DD19      00243         ADD    IX, DE  
-5375  FD21E954  00244         LD     IY, YS
-5379  1600      00245         LD     D,0
-537B  58        00246         LD     E,B
-537C  FD19      00247         ADD    IY, DE   
-537E  DD7E00    00248         LD     A,(IX)
-5381  FD4E00    00249         LD     C,(IY)
-5384  81        00250         ADD    A,C    
-5385  FE30      00251         CP     48
-5387  D28D53    00252         JP     NC,TOBIG6
-538A  C38F53    00253         JP     OK6
-538D  D630      00254 TOBIG6: SUB    48 
-538F  FD7700    00255 OK6:    LD     (IY),A                      
-5392  C3E653    00256         JP     JOIN
-                00257 
-                00258 ; ----------------------------------------------------------------
-                00259 ; | This little nasty thing works around a limitation of the Z80 |
-                00260 ; |                                                              |
-                00261 ; | This is a hacky way to get from the bottom of the main loop  |
-                00262 ; | back to the top of the main loop (maximum distance thing     |
-                00263 ; ----------------------------------------------------------------
-                00264 JB5:                     ; branch back to L5 (top of the main loop)
-5395  C37452    00265         JP     L5
-                00266 
-                00267                          ; this block is the same as the above, just plane 4 (DE set to 3)        
-5398  DD216955  00268 LS32:   LD     IX, XINCS
-539C  1600      00269         LD     D,0
-539E  1E03      00270         LD     E,3
-53A0  DD19      00271         ADD    IX, DE   
-53A2  FD216954  00272         LD     IY, XS
-53A6  1600      00273         LD     D,0
-53A8  58        00274         LD     E,B
-53A9  FD19      00275         ADD    IY, DE   
-53AB  DD7E00    00276         LD     A,(IX)
-53AE  FD4E00    00277         LD     C,(IY)
-53B1  81        00278         ADD    A,C      
-53B2  FE80      00279         CP     128
-53B4  D2BA53    00280         JP     NC,TOBIG7
-53B7  C3BC53    00281         JP     OK7
-53BA  D680      00282 TOBIG7: SUB    128 
-53BC  FD7700    00283 OK7:    LD     (IY),A
-                00284 
-53BF  DD216D55  00285         LD     IX, YINCS
-53C3  1600      00286         LD     D,0
-53C5  1E03      00287         LD     E,3
-53C7  DD19      00288         ADD    IX, DE   
-53C9  FD21E954  00289         LD     IY, YS
-53CD  1600      00290         LD     D,0
-53CF  58        00291         LD     E,B
-53D0  FD19      00292         ADD    IY, DE   
-53D2  DD7E00    00293         LD     A,(IX)
-53D5  FD4E00    00294         LD     C,(IY)
-53D8  81        00295         ADD    A,C     
-53D9  FE30      00296         CP     48
-53DB  D2E153    00297         JP     NC,TOBIG8
-53DE  C3E353    00298         JP     OK8
-53E1  D630      00299 TOBIG8: SUB    48 
-53E3  FD7700    00300 OK8:    LD     (IY),A        
-                00301 
-                00302 ;
-                00303 ; ----------------------------------------------------------------
-                00304 ; |  Draw pixel at XS[B] and YS[B]                               |
-                00305 ; ----------------------------------------------------------------
-                00306 JOIN:                    ; XS[B] and YS[B] have been updated, get ready to call SETGR to plot flake
-53E6  DD216954  00307         LD     IX,XS
-53EA  1600      00308         LD     D,0
-53EC  58        00309         LD     E,B
-53ED  DD19      00310         ADD    IX,DE
-53EF  DD4E00    00311         LD     C,(IX)    ; C now contains the X position
-                00312 
-53F2  DD21E954  00313         LD     IX,YS
-53F6  1600      00314         LD     D,0
-53F8  58        00315         LD     E,B
-53F9  DD19      00316         ADD    IX,DE
-53FB  DD5600    00317         LD     D,(IX)    ; D now contains the Y position
+                00118 ; |  Iterate over current positions and "unset" them so          |
+                00119 ; |  that they disappear.                                        |
+                00120 ; ----------------------------------------------------------------
+527A  0680      00121         LD     B,128          ; Loop over all 128 snowflake positions
+                00122 L5            
+527C  DD21F954  00123         LD     IX,XS          ; put the address of XS array into IX
+5280  1600      00124         LD     D,0            ; D = 0
+5282  58        00125         LD     E,B            ; E = B (put loop counter into a 16 bit register)
+5283  DD19      00126         ADD    IX,DE          ; DE to IX, making IX point to an array instance
+5285  DD4E00    00127         LD     C,(IX)         ; C now contains the X position for a flake
+                00128 
+5288  DD217955  00129         LD     IX,YS          ; put the address of YS array into IX
+528C  1600      00130         LD     D,0            ; D = 0
+528E  58        00131         LD     E,B            ; E = B (put loop counter into a 16 bit register)
+528F  DD19      00132         ADD    IX,DE          ; DE to IX, making IX point to an array instance
+5291  DD5600    00133         LD     D,(IX)         ; D now contains the Y position for a flake
+                00134 
+5294  3E01      00135         LD     A,1
+5296  320656    00136         LD     (PARMMODE),A
+5299  79        00137         LD     A,C
+529A  320456    00138         LD     (PARMX),A
+529D  7A        00139         LD     A,D
+529E  320556    00140         LD     (PARMY),A
+52A1  CD4454    00141         CALL   FSETGR
+                00142 ;
+                00143 ; ----------------------------------------------------------------
+                00144 ; |  Put current main loop iterator into A register              |
+                00145 ; |  Jump to specific locations based on where we are in the     |
+                00146 ; |  main loop (this is how we form the 4 planes of flakes       |
+                00147 ; ----------------------------------------------------------------
+52A4  78        00148         LD     A,B
+52A5  FE20      00149         CP     32             ; B < 32?
+52A7  DAAA53    00150         JP     C,LS32         ; yes, plane 4
+52AA  FE40      00151         CP     64             ; B < 64?
+52AC  DA5653    00152         JP     C,LS64         ; yes, plane 3
+52AF  FE60      00153         CP     96             ; B < 96?
+52B1  DA0553    00154         JP     C,LS96         ; yes, plane 2
+                00155                               
+                00156 LS128                         ;      plane 1
+52B4  DD21F955  00157         LD     IX, XINCS      ; Load address of XINCS into IX
+52B8  1600      00158         LD     D,0            ; D = 0
+52BA  1E00      00159         LD     E,0            ; E = 0
+52BC  DD19      00160         ADD    IX, DE         ; IX now contains address of XINCS[0]
+52BE  FD21F954  00161         LD     IY, XS         ; Load XS array address into IY
+52C2  1600      00162         LD     D,0            ; D = 0
+52C4  58        00163         LD     E,B            ; E = main loop counter (flake number)
+52C5  FD19      00164         ADD    IY, DE         ; IY now contains address of XS[B]
+52C7  DD7E00    00165         LD     A,(IX)         ; Load XINCS[0] into A
+52CA  FD4E00    00166         LD     C,(IY)         ; Load XS[B] into C
+52CD  81        00167         ADD    A,C            ; A now contains value we want (XINCS[0]), add it to XS[B]
+52CE  FE80      00168         CP     128            ; Is flake X position > 128 now?
+52D0  D2D652    00169         JP     NC,TOBIG1      ; Yes, go do something about it
+52D3  C3D852    00170         JP     OK1            ; Nope, it's fine, jump over this stuff 
+52D6  D680      00171 TOBIG1  SUB    128            ; Since it was too big
+52D8  FD7700    00172 OK1     LD     (IY),A         ; Put newly computed XS[B] back into memory
+                00173 
+52DB  DD21FD55  00174         LD     IX, YINCS      ; Load address of YINCS into IX
+52DF  1600      00175         LD     D,0            ; D = 0
+52E1  1E00      00176         LD     E,0            ; E = 0
+52E3  DD19      00177         ADD    IX, DE         ; IX now contains address of YINCS[0]
+52E5  FD217955  00178         LD     IY, YS         ; Load YS array address into IY
+52E9  1600      00179         LD     D,0            ; D = 0
+52EB  58        00180         LD     E,B            ; E = main loop counter (flake number)
+52EC  FD19      00181         ADD    IY, DE         ; IY now contains address of YS[B]
+52EE  DD7E00    00182         LD     A,(IX)         ; Load YINCS[0] into A
+52F1  FD4E00    00183         LD     C,(IY)         ; Load YS[B] into C
+52F4  81        00184         ADD    A,C            ; A now contains value we want (YINCS[0]), add it to YS[B]
+52F5  FE30      00185         CP     48             ; Is flake X position > 48 now?
+52F7  D2FD52    00186         JP     NC,TOBIG2      ; Yes, go do something about it
+52FA  C3FF52    00187         JP     OK2            ; Nope, it's fine, jump over this stuff 
+52FD  D630      00188 TOBIG2  SUB    48             ; Since it was too big
+52FF  FD7700    00189 OK2     LD     (IY),A         ; Put newly computed YS[B] back into memory
+5302  C3F853    00190         JP     JOIN           ; Okay, we've set the XS[B] and YS[B] to their new values
+                00191 
+                00192                               ; this block is the same as the above, just plane 2 (DE set to 1)
+5305  DD21F955  00193 LS96    LD     IX, XINCS
+5309  1600      00194         LD     D,0
+530B  1E01      00195         LD     E,1
+530D  DD19      00196         ADD    IX, DE  
+530F  FD21F954  00197         LD     IY, XS
+5313  1600      00198         LD     D,0
+5315  58        00199         LD     E,B
+5316  FD19      00200         ADD    IY, DE   
+5318  DD7E00    00201         LD     A,(IX)
+531B  FD4E00    00202         LD     C,(IY)
+531E  81        00203         ADD    A,C    
+531F  FE80      00204         CP     128
+5321  D22753    00205         JP     NC,TOBIG3
+5324  C32953    00206         JP     OK3
+5327  D680      00207 TOBIG3  SUB    128 
+5329  FD7700    00208 OK3     LD     (IY),A
+                00209 
+532C  DD21FD55  00210         LD     IX, YINCS
+5330  1600      00211         LD     D,0
+5332  1E01      00212         LD     E,1
+5334  DD19      00213         ADD    IX, DE   
+5336  FD217955  00214         LD     IY, YS
+533A  1600      00215         LD     D,0
+533C  58        00216         LD     E,B
+533D  FD19      00217         ADD    IY, DE 
+533F  DD7E00    00218         LD     A,(IX)
+5342  FD4E00    00219         LD     C,(IY)
+5345  81        00220         ADD    A,C  
+5346  FE30      00221         CP     48
+5348  D24E53    00222         JP     NC,TOBIG4
+534B  C35053    00223         JP     OK4
+534E  D630      00224 TOBIG4  SUB    48 
+5350  FD7700    00225 OK4     LD     (IY),A                      
+5353  C3F853    00226         JP     JOIN
+                00227 
+                00228                               ; this block is the same as the above, just plane 3 (DE set to 2)
+5356  DD21F955  00229 LS64    LD     IX, XINCS
+535A  1600      00230         LD     D,0
+535C  1E02      00231         LD     E,2
+535E  DD19      00232         ADD    IX, DE   
+5360  FD21F954  00233         LD     IY, XS
+5364  1600      00234         LD     D,0
+5366  58        00235         LD     E,B
+5367  FD19      00236         ADD    IY, DE  
+5369  DD7E00    00237         LD     A,(IX)
+536C  FD4E00    00238         LD     C,(IY)
+536F  81        00239         ADD    A,C      
+5370  FE80      00240         CP     128
+5372  D27853    00241         JP     NC,TOBIG5
+5375  C37A53    00242         JP     OK5        
+5378  D680      00243 TOBIG5  SUB    128 
+537A  FD7700    00244 OK5     LD     (IY),A
+                00245        
+537D  DD21FD55  00246         LD     IX, YINCS
+5381  1600      00247         LD     D,0
+5383  1E02      00248         LD     E,2
+5385  DD19      00249         ADD    IX, DE  
+5387  FD217955  00250         LD     IY, YS
+538B  1600      00251         LD     D,0
+538D  58        00252         LD     E,B
+538E  FD19      00253         ADD    IY, DE   
+5390  DD7E00    00254         LD     A,(IX)
+5393  FD4E00    00255         LD     C,(IY)
+5396  81        00256         ADD    A,C    
+5397  FE30      00257         CP     48
+5399  D29F53    00258         JP     NC,TOBIG6
+539C  C3A153    00259         JP     OK6
+539F  D630      00260 TOBIG6  SUB    48 
+53A1  FD7700    00261 OK6     LD     (IY),A                      
+53A4  C3F853    00262         JP     JOIN
+                00263 
+                00264 ; ----------------------------------------------------------------
+                00265 ; | This little nasty thing works around a limitation of the Z80 |
+                00266 ; |                                                              |
+                00267 ; | This is a hacky way to get from the bottom of the main loop  |
+                00268 ; | back to the top of the main loop (maximum distance thing     |
+                00269 ; ----------------------------------------------------------------
+                00270 JB5                      ; branch back to L5 (top of the main loop)
+53A7  C37C52    00271         JP     L5
+                00272 
+                00273                          ; this block is the same as the above, just plane 4 (DE set to 3)        
+53AA  DD21F955  00274 LS32    LD     IX, XINCS
+53AE  1600      00275         LD     D,0
+53B0  1E03      00276         LD     E,3
+53B2  DD19      00277         ADD    IX, DE   
+53B4  FD21F954  00278         LD     IY, XS
+53B8  1600      00279         LD     D,0
+53BA  58        00280         LD     E,B
+53BB  FD19      00281         ADD    IY, DE   
+53BD  DD7E00    00282         LD     A,(IX)
+53C0  FD4E00    00283         LD     C,(IY)
+53C3  81        00284         ADD    A,C      
+53C4  FE80      00285         CP     128
+53C6  D2CC53    00286         JP     NC,TOBIG7
+53C9  C3CE53    00287         JP     OK7
+53CC  D680      00288 TOBIG7  SUB    128 
+53CE  FD7700    00289 OK7     LD     (IY),A
+                00290 
+53D1  DD21FD55  00291         LD     IX, YINCS
+53D5  1600      00292         LD     D,0
+53D7  1E03      00293         LD     E,3
+53D9  DD19      00294         ADD    IX, DE   
+53DB  FD217955  00295         LD     IY, YS
+53DF  1600      00296         LD     D,0
+53E1  58        00297         LD     E,B
+53E2  FD19      00298         ADD    IY, DE   
+53E4  DD7E00    00299         LD     A,(IX)
+53E7  FD4E00    00300         LD     C,(IY)
+53EA  81        00301         ADD    A,C     
+53EB  FE30      00302         CP     48
+53ED  D2F353    00303         JP     NC,TOBIG8
+53F0  C3F553    00304         JP     OK8
+53F3  D630      00305 TOBIG8  SUB    48 
+53F5  FD7700    00306 OK8     LD     (IY),A        
+                00307 
+                00308 ;
+                00309 ; ----------------------------------------------------------------
+                00310 ; |  Draw pixel at XS[B] and YS[B]                               |
+                00311 ; ----------------------------------------------------------------
+                00312 JOIN:                    ; XS[B] and YS[B] have been updated, get ready to call SETGR to plot flake
+53F8  DD21F954  00313         LD     IX,XS
+53FC  1600      00314         LD     D,0
+53FE  58        00315         LD     E,B
+53FF  DD19      00316         ADD    IX,DE
+5401  DD4E00    00317         LD     C,(IX)    ; C now contains the X position
                 00318 
-53FE  59        00319         LD     E,C       ; E = C (x position)
-53FF  C5        00320         PUSH   BC        ; push BC so that B can be used in SETGR
-5400  CD0954    00321         CALL SETGR       ; plot the pixel at (E,D)
-5403  C1        00322         POP    BC        ; pop BC back so B contains main loop iterator
-                00323 
-5404  108F      00324         DJNZ   JB5       ; decrement B, if it's greater than zero, use the trampoline
-                00325                          ; routine to bounce back to the top of the loop
-                00326 
-5406  C37252    00327         JP     MAIN      ; start over after plotting all 128 flakes        
-                00328 
-                00329         
-                00330         
-                00331 ; **********************************************************
-                00332 ; *  Graphics routines                                     *
-                00333 ; *  Set (E,D) before calling SETGR, UNSETGR, or TEST      *
-                00334 ; *  X coordinate in E register                            *
-                00335 ; *  Y coordinate in D register                            *
-                00336 ; *  Note, all registers are destroyed by this routine     *
-                00337 ; *  Make sure you PUSH and POP the registers before       *
-                00338 ; *  invoking any of these routines                        *
-                00339 ; **********************************************************
-5409  3EC6      00340 SETGR   LD  A,0C6H
-540B  1806      00341         JR  TEST10
-540D  3E86      00342 UNSETGR LD  A,86H
-540F  1802      00343         JR  TEST10
-5411  3E46      00344 TEST    LD  A,46H
-5413  324654    00345 TEST10  LD  (INST+1),A
-5416  7A        00346 ADDRES  LD  A,D
-5417  06FF      00347         LD  B,0FFH
-5419  04        00348 LOOP    INC B
-541A  D603      00349         SUB 3
-541C  F21954    00350         JP  P,LOOP
-541F  C603      00351         ADD A,3
-5421  CB27      00352         SLA A
-5423  4F        00353         LD  C,A
-5424  68        00354         LD  L,B
-5425  2600      00355         LD  H,0
-5427  0606      00356         LD  B,6
-5429  29        00357 LOOP1   ADD HL,HL
-542A  10FD      00358         DJNZ LOOP1
-542C  1600      00359         LD  D,0
-542E  CB3B      00360         SRL E
-5430  3001      00361         JR  NC,CONT
-5432  0C        00362         INC C
-5433  19        00363 CONT    ADD HL,DE
-5434  11003C    00364         LD  DE,VIDEO
-5437  19        00365         ADD HL,DE
-5438  CB21      00366         SLA C
-543A  CB21      00367         SLA C
-543C  CB21      00368         SLA C
-543E  3A4654    00369         LD  A,(INST+1)
-5441  81        00370         ADD A,C
-5442  324654    00371         LD  (INST+1),A
-5445  CB        00372 INST    DEFB    0CBH
-5446  00        00373         DEFB    0
-5447  CBFE      00374         SET     7,(HL)
-5449  C9        00375         RET
-                00376 
-                00377 
-                00378 ; * generates a random number from 0 - 255 (best used as a seed value, because it's not
-                00379 ; * especially random
-544A  E5        00380 RANDSD   PUSH    HL
-544B  ED5F      00381          LD      A,R
-544D  6F        00382          LD      L,A
-544E  E63F      00383          AND     63
-5450  67        00384          LD      H,A
-5451  7E        00385          LD      A,(HL)
-5452  E1        00386          POP     HL
-5453  327155    00387          LD      (seed),A
-5456  C9        00388          RET
-                00389 
-                00390 ; * Generates pretty decent random number between 0 - 255, and as long as the seed routine has been called
-5457  C5        00391 RANDR    PUSH   BC
-5458  3A7155    00392          ld a, (seed)
-545B  47        00393          ld b, a 
-545C  0F        00394          rrca ; multiply by 32
-545D  0F        00395          rrca
-545E  0F        00396          rrca
-545F  EE1F      00397          xor   1fH 
-5461  80        00398          add a, b
-5462  DEFF      00399          sbc a, 255 ; carry
-5464  327155    00400          ld (seed), a
-5467  C1        00401          POP    BC
-5468  C9        00402          ret
-                00403 
-                00404 ; ###############################################################
-                00405 ; # DATA SECTION                                                #
-                00406 ; ###############################################################
-5469            00407 XS       DS   128  ; 128 X locations
-54E9            00408 YS       DS   128  ; 128 Y locations
-5569            00409 XINCS    DS   4    ; 4 x increment values 
-556D            00410 YINCS    DS   4    ; 4 y increment values 
-5571            00411 SEED     DS   1    ; seed value for random numbers
-                00412 
-                00413         END
+5404  DD217955  00319         LD     IX,YS
+5408  1600      00320         LD     D,0
+540A  58        00321         LD     E,B
+540B  DD19      00322         ADD    IX,DE
+540D  DD5600    00323         LD     D,(IX)    ; D now contains the Y position
+                00324 
+5410  3E00      00325         LD     A,0
+5412  320656    00326         LD     (PARMMODE),A
+5415  79        00327         LD     A,C
+5416  320456    00328         LD     (PARMX),A
+5419  7A        00329         LD     A,D
+541A  320556    00330         LD     (PARMY),A
+541D  CD4454    00331         CALL   FSETGR
+                00332 
+                00333 
+5420  1085      00334         DJNZ   JB5       ; decrement B, if it's greater than zero, use the trampoline
+                00335                          ; routine to bounce back to the top of the loop
+                00336 
+5422  C37A52    00337         JP     MAIN      ; start over after plotting all 128 flakes        
+                00338 
+                00339 ; * generates a random number from 0 - 255 (best used as a seed value, because it's not
+                00340 ; * especially random
+5425  E5        00341 RANDSD   PUSH    HL
+5426  ED5F      00342          LD      A,R
+5428  6F        00343          LD      L,A
+5429  E63F      00344          AND     63
+542B  67        00345          LD      H,A
+542C  7E        00346          LD      A,(HL)
+542D  E1        00347          POP     HL
+542E  320156    00348          LD      (seed),A
+5431  C9        00349          RET
+                00350 
+                00351 ; * Generates pretty decent random number between 0 - 255, and as long as the seed routine has been called
+5432  C5        00352 RANDR    PUSH   BC
+5433  3A0156    00353          ld a, (seed)
+5436  47        00354          ld b, a 
+5437  0F        00355          rrca ; multiply by 32
+5438  0F        00356          rrca
+5439  0F        00357          rrca
+543A  EE1F      00358          xor   1fH 
+543C  80        00359          add a, b
+543D  DEFF      00360          sbc a, 255 ; carry
+543F  320156    00361          ld (seed), a
+5442  C1        00362          POP    BC
+5443  C9        00363          ret
+                00364 
+                00365 ; |--------------------------------------------------------------------------------------|
+                00366 ; | Graphics routine                                                                     |
+                00367 ; | This routine uses the PARMBLK block of parameters.  Set them before calling          |
+                00368 ; |--------------------------------------------------------------------------------------|
+5444  F5        00369 FSETGR   PUSH    AF
+5445  C5        00370          PUSH    BC
+5446  D5        00371          PUSH    DE
+5447  E5        00372          PUSH    HL
+5448  DDE5      00373          PUSH    IX
+544A  FDE5      00374          PUSH    IY
+                00375 
+544C  DD210256  00376          LD      IX,PARMBLK
+5450  1600      00377          LD      D,0
+5452  DD5E03    00378          LD      E,(IX+3)
+5455  CB23      00379          SLA     E
+5457  DD6E00    00380          LD      L,(IX+0)
+545A  DD6601    00381          LD      H,(IX+1)
+545D  19        00382          ADD     HL,DE
+545E  015500    00383          LD      BC,TABLEA
+5461  09        00384          ADD     HL,BC
+5462  E5        00385          PUSH    HL
+5463  FDE1      00386          POP     IY
+5465  FD7E00    00387          LD      A,(IY+0)
+5468  E6E0      00388          AND     0E0H
+546A  6F        00389          LD      L,A
+546B  FD6601    00390          LD      H,(IY+1)
+546E  DD5E02    00391          LD      E,(IX+2)
+5471  1600      00392          LD      D,0
+5473  CB3B      00393          SRL     E
+5475  19        00394          ADD     HL,DE
+5476  FD7E00    00395          LD      A,(IY+0)
+5479  E61F      00396          AND     1FH
+547B  DDCB0246  00397          BIT     0,(IX+2)
+547F  2802      00398          JR      Z,FSE020
+5481  CB27      00399          SLA     A
+5483  46        00400 FSE020   LD      B,(HL)
+5484  DDCB0446  00401          BIT     0,(IX+4)
+5488  2804      00402          JR      Z,FSE030
+548A  2F        00403          CPL
+548B  A0        00404          AND     B
+548C  1801      00405          JR      FSE040
+548E  B0        00406 FSE030   OR      B
+548F  77        00407 FSE040   LD      (HL),A
+5490  FDE1      00408          POP     IY
+5492  DDE1      00409          POP     IX
+5494  E1        00410          POP     HL
+5495  D1        00411          POP     DE
+5496  C1        00412          POP     BC
+5497  F1        00413          POP     AF
+5498  C9        00414          RET
+                00415 
+                00416 TABLEA   EQU     $-FSETGR
+5499  013C      00417          DEFW    3C00H+1
+549B  043C      00418          DEFW    3C00H+4
+549D  103C      00419          DEFW    3C00H+16
+549F  413C      00420          DEFW    3C40H+1
+54A1  443C      00421          DEFW    3C40H+4
+54A3  503C      00422          DEFW    3C40H+16
+54A5  813C      00423          DEFW    3C80H+1
+54A7  843C      00424          DEFW    3C80H+4
+54A9  903C      00425          DEFW    3C80H+16
+54AB  C13C      00426          DEFW    3CC0H+1
+54AD  C43C      00427          DEFW    3CC0H+4
+54AF  D03C      00428          DEFW    3CC0H+16
+54B1  013D      00429          DEFW    3D00H+1
+54B3  043D      00430          DEFW    3D00H+4
+54B5  103D      00431          DEFW    3D00H+16
+54B7  413D      00432          DEFW    3D40H+1
+54B9  443D      00433          DEFW    3D40H+4
+54BB  503D      00434          DEFW    3D40H+16
+54BD  813D      00435          DEFW    3D80H+1
+54BF  843D      00436          DEFW    3D80H+4
+54C1  903D      00437          DEFW    3D80H+16
+54C3  C13D      00438          DEFW    3DC0H+1
+54C5  C43D      00439          DEFW    3DC0H+4
+54C7  D03D      00440          DEFW    3DC0H+16
+54C9  013E      00441          DEFW    3E00H+1
+54CB  043E      00442          DEFW    3E00H+4
+54CD  103E      00443          DEFW    3E00H+16
+54CF  413E      00444          DEFW    3E40H+1
+54D1  443E      00445          DEFW    3E40H+4
+54D3  503E      00446          DEFW    3E40H+16
+54D5  813E      00447          DEFW    3E80H+1
+54D7  843E      00448          DEFW    3E80H+4
+54D9  903E      00449          DEFW    3E80H+16
+54DB  C13E      00450          DEFW    3EC0H+1
+54DD  C43E      00451          DEFW    3EC0H+4
+54DF  D03E      00452          DEFW    3EC0H+16
+54E1  013F      00453          DEFW    3F00H+1
+54E3  043F      00454          DEFW    3F00H+4
+54E5  103F      00455          DEFW    3F00H+16
+54E7  413F      00456          DEFW    3F40H+1
+54E9  443F      00457          DEFW    3F40H+4
+54EB  503F      00458          DEFW    3F40H+16
+54ED  813F      00459          DEFW    3F80H+1
+54EF  843F      00460          DEFW    3F80H+4
+54F1  903F      00461          DEFW    3F80H+16
+54F3  C13F      00462          DEFW    3FC0H+1
+54F5  C43F      00463          DEFW    3FC0H+4
+54F7  D03F      00464          DEFW    3FC0H+16
+                00465 
+                00466 
+                00467 
+                00468 ; ###############################################################
+                00469 ; # DATA SECTION                                                #
+                00470 ; ###############################################################
+54F9            00471 XS       DS   128  ; 128 X locations
+5579            00472 YS       DS   128  ; 128 Y locations
+55F9            00473 XINCS    DS   4    ; 4 x increment values 
+55FD            00474 YINCS    DS   4    ; 4 y increment values 
+5601            00475 SEED     DS   1    ; seed value for random numbers
+                00476 
+5602            00477 PARMBLK  DS   2    ; Address of graphics block routine
+5604            00478 PARMX    DS   1    ; X address for graphics SET/RESET
+5605            00479 PARMY    DS   1    ; Y address for graphics SET/RESET
+5606            00480 PARMMODE DS   1    ; SET/RESET mode (SET=0, RESET=1)
+                00481         END
 
 
-ADDRES          5416  CONT            5433  ENTRY           5200  
-INST            5445  JB5             5395  JOIN            53E6  
-L1              5216  L2              522A  L3              5251  
-L4              5264  L5              5274  LOOP            5419  
-LOOP1           5429  LS128           52A2  LS32            5398  
-LS64            5344  LS96            52F3  MAIN            5272  
-OK1             52C6  OK2             52ED  OK3             5317  
-OK4             533E  OK5             5368  OK6             538F  
-OK7             53BC  OK8             53E3  RANDR           5457  
-RANDSD          544A  SEED            5571  SETGR           5409  
-TEST            5411  TEST10          5413  TOBIG1          52C4  
-TOBIG2          52EB  TOBIG3          5315  TOBIG4          533C  
-TOBIG5          5366  TOBIG6          538D  TOBIG7          53BA  
-TOBIG8          53E1  UNSETGR         540D  VIDEO           3C00  
-XINCS           5569  XS              5469  YINCS           556D  
-YS              54E9  
+ENTRY           5200  FSE020          5483  FSE030          548E  
+FSE040          548F  FSETGR          5444  JB5             53A7  
+JOIN            53F8  L1              5216  L2              522A  
+L3              5251  L4              5264  L5              527C  
+LS128           52B4  LS32            53AA  LS64            5356  
+LS96            5305  MAIN            527A  OK1             52D8  
+OK2             52FF  OK3             5329  OK4             5350  
+OK5             537A  OK6             53A1  OK7             53CE  
+OK8             53F5  PARMBLK         5602  PARMMODE        5606  
+PARMX           5604  PARMY           5605  RANDR           5432  
+RANDSD          5425  SEED            5601  TABLEA          0055  
+TOBIG1          52D6  TOBIG2          52FD  TOBIG3          5327  
+TOBIG4          534E  TOBIG5          5378  TOBIG6          539F  
+TOBIG7          53CC  TOBIG8          53F3  VIDEO           3C00  
+XINCS           55F9  XS              54F9  YINCS           55FD  
+YS              5579  

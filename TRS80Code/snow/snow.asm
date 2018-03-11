@@ -22,12 +22,12 @@ VIDEO    EQU    3C00H   ; location of video RAM in memory
 ; *          C.  Draw pixel
 ; *****************************************************************
 ;
-; ----------------------------------------
-; |  Clear screen                        |
-; ----------------------------------------  
+; ----------------------------------------------------------------
+; |  Clear screen                                                |
+; ----------------------------------------------------------------
 ENTRY   LD     HL,VIDEO       ; put VIDEO RAM address into HL register
         LD     DE,VIDEO+1     ; put VIDEO RAM address +1 into DE 
-        LD     BC,400H        ; put counter into BC 
+        LD     BC,3FFH        ; put counter into BC 
         LD     (HL),10000000b ; put ascii 128 into video location
         LDIR                  ; run fast memory copy
 ;
@@ -42,7 +42,7 @@ ENTRY   LD     HL,VIDEO       ; put VIDEO RAM address into HL register
 ; ----------------------------------------------------------------
         LD     B,128          ; do this loop 128 times
         LD     IX, XS         ; store the address of XS in IX
-L1:
+L1
         CALL   RANDR          ; get random number for A
         SRA    A              ; divide A by 2 (0 - 127)
         AND    01111111b
@@ -56,7 +56,7 @@ L1:
 ; ----------------------------------------------------------------
         LD     B,128
         LD     IX, YS
-L2:
+L2
         CALL   RANDR          ; get random number for A
         SRA    A              ; >> 1 (/2) (256 = 128)
         AND    01111111b      ; make sure to get rid of left most digit
@@ -80,7 +80,7 @@ L2:
 ; ----------------------------------------------------------------
         LD     B,4            ; set B to 4
         LD     IX, XINCS      ; set IX to the memory location of XINCS[0]
-L3:
+L3
         CALL   RANDR          ; get random numer for A
         LD     C,3            ; set C to 3
         AND    C              ; bitwise AND random value with 3 (meaning random number 0 - 3)
@@ -94,7 +94,7 @@ L3:
 ; ----------------------------------------------------------------
         LD     B,4            ; set B to 4
         LD     IX, YINCS      ; set IX to memory location of YINCS[0]
-L4:
+L4 
         CALL   RANDR          ; get random number for A
         LD     C,2            ; set C to 2
         AND    C              ; AND A with 2, giving a random number from 0 - 2 in A
@@ -103,6 +103,9 @@ L4:
         INC    IX             ; increment IX
         DJNZ   L4             ; subtract 1 from B and jump back to L4 if B > 0
 
+
+        LD     IX,FSETGR
+        LD     (PARMBLK),IX   ; set PARMBLK to point to graphics function
 
 ;
 ; ----------------------------------------------------------------
@@ -116,7 +119,7 @@ MAIN
 ; |  that they disappear.                                        |
 ; ----------------------------------------------------------------
         LD     B,128          ; Loop over all 128 snowflake positions
-L5:            
+L5            
         LD     IX,XS          ; put the address of XS array into IX
         LD     D,0            ; D = 0
         LD     E,B            ; E = B (put loop counter into a 16 bit register)
@@ -128,11 +131,14 @@ L5:
         LD     E,B            ; E = B (put loop counter into a 16 bit register)
         ADD    IX,DE          ; DE to IX, making IX point to an array instance
         LD     D,(IX)         ; D now contains the Y position for a flake
-        LD     E,C            ; move C (current X position) to E
-        PUSH   BC             ; push BC onto the stack so we can loop inside UNSETGR
-        CALL   UNSETGR        ; call routine to unset (black out) a pixel
-        POP    BC             ; pop BC back from the stack
 
+        LD     A,1
+        LD     (PARMMODE),A
+        LD     A,C
+        LD     (PARMX),A
+        LD     A,D
+        LD     (PARMY),A
+        CALL   FSETGR
 ;
 ; ----------------------------------------------------------------
 ; |  Put current main loop iterator into A register              |
@@ -147,7 +153,7 @@ L5:
         CP     96             ; B < 96?
         JP     C,LS96         ; yes, plane 2
                               
-LS128:                        ;      plane 1
+LS128                         ;      plane 1
         LD     IX, XINCS      ; Load address of XINCS into IX
         LD     D,0            ; D = 0
         LD     E,0            ; E = 0
@@ -162,8 +168,8 @@ LS128:                        ;      plane 1
         CP     128            ; Is flake X position > 128 now?
         JP     NC,TOBIG1      ; Yes, go do something about it
         JP     OK1            ; Nope, it's fine, jump over this stuff 
-TOBIG1: SUB    128            ; Since it was too big
-OK1:    LD     (IY),A         ; Put newly computed XS[B] back into memory
+TOBIG1  SUB    128            ; Since it was too big
+OK1     LD     (IY),A         ; Put newly computed XS[B] back into memory
 
         LD     IX, YINCS      ; Load address of YINCS into IX
         LD     D,0            ; D = 0
@@ -179,12 +185,12 @@ OK1:    LD     (IY),A         ; Put newly computed XS[B] back into memory
         CP     48             ; Is flake X position > 48 now?
         JP     NC,TOBIG2      ; Yes, go do something about it
         JP     OK2            ; Nope, it's fine, jump over this stuff 
-TOBIG2: SUB    48             ; Since it was too big
-OK2:    LD     (IY),A         ; Put newly computed YS[B] back into memory
+TOBIG2  SUB    48             ; Since it was too big
+OK2     LD     (IY),A         ; Put newly computed YS[B] back into memory
         JP     JOIN           ; Okay, we've set the XS[B] and YS[B] to their new values
 
                               ; this block is the same as the above, just plane 2 (DE set to 1)
-LS96:   LD     IX, XINCS
+LS96    LD     IX, XINCS
         LD     D,0
         LD     E,1
         ADD    IX, DE  
@@ -198,8 +204,8 @@ LS96:   LD     IX, XINCS
         CP     128
         JP     NC,TOBIG3
         JP     OK3
-TOBIG3: SUB    128 
-OK3:    LD     (IY),A
+TOBIG3  SUB    128 
+OK3     LD     (IY),A
 
         LD     IX, YINCS
         LD     D,0
@@ -215,12 +221,12 @@ OK3:    LD     (IY),A
         CP     48
         JP     NC,TOBIG4
         JP     OK4
-TOBIG4: SUB    48 
-OK4:    LD     (IY),A                      
+TOBIG4  SUB    48 
+OK4     LD     (IY),A                      
         JP     JOIN
 
                               ; this block is the same as the above, just plane 3 (DE set to 2)
-LS64:   LD     IX, XINCS
+LS64    LD     IX, XINCS
         LD     D,0
         LD     E,2
         ADD    IX, DE   
@@ -234,8 +240,8 @@ LS64:   LD     IX, XINCS
         CP     128
         JP     NC,TOBIG5
         JP     OK5        
-TOBIG5: SUB    128 
-OK5:    LD     (IY),A
+TOBIG5  SUB    128 
+OK5     LD     (IY),A
        
         LD     IX, YINCS
         LD     D,0
@@ -251,8 +257,8 @@ OK5:    LD     (IY),A
         CP     48
         JP     NC,TOBIG6
         JP     OK6
-TOBIG6: SUB    48 
-OK6:    LD     (IY),A                      
+TOBIG6  SUB    48 
+OK6     LD     (IY),A                      
         JP     JOIN
 
 ; ----------------------------------------------------------------
@@ -261,11 +267,11 @@ OK6:    LD     (IY),A
 ; | This is a hacky way to get from the bottom of the main loop  |
 ; | back to the top of the main loop (maximum distance thing     |
 ; ----------------------------------------------------------------
-JB5:                     ; branch back to L5 (top of the main loop)
+JB5                      ; branch back to L5 (top of the main loop)
         JP     L5
 
                          ; this block is the same as the above, just plane 4 (DE set to 3)        
-LS32:   LD     IX, XINCS
+LS32    LD     IX, XINCS
         LD     D,0
         LD     E,3
         ADD    IX, DE   
@@ -279,8 +285,8 @@ LS32:   LD     IX, XINCS
         CP     128
         JP     NC,TOBIG7
         JP     OK7
-TOBIG7: SUB    128 
-OK7:    LD     (IY),A
+TOBIG7  SUB    128 
+OK7     LD     (IY),A
 
         LD     IX, YINCS
         LD     D,0
@@ -296,8 +302,8 @@ OK7:    LD     (IY),A
         CP     48
         JP     NC,TOBIG8
         JP     OK8
-TOBIG8: SUB    48 
-OK8:    LD     (IY),A        
+TOBIG8  SUB    48 
+OK8     LD     (IY),A        
 
 ;
 ; ----------------------------------------------------------------
@@ -316,64 +322,19 @@ JOIN:                    ; XS[B] and YS[B] have been updated, get ready to call 
         ADD    IX,DE
         LD     D,(IX)    ; D now contains the Y position
 
-        LD     E,C       ; E = C (x position)
-        PUSH   BC        ; push BC so that B can be used in SETGR
-        CALL SETGR       ; plot the pixel at (E,D)
-        POP    BC        ; pop BC back so B contains main loop iterator
+        LD     A,0
+        LD     (PARMMODE),A
+        LD     A,C
+        LD     (PARMX),A
+        LD     A,D
+        LD     (PARMY),A
+        CALL   FSETGR
+
 
         DJNZ   JB5       ; decrement B, if it's greater than zero, use the trampoline
                          ; routine to bounce back to the top of the loop
 
         JP     MAIN      ; start over after plotting all 128 flakes        
-
-        
-        
-; **********************************************************
-; *  Graphics routines                                     *
-; *  Set (E,D) before calling SETGR, UNSETGR, or TEST      *
-; *  X coordinate in E register                            *
-; *  Y coordinate in D register                            *
-; *  Note, all registers are destroyed by this routine     *
-; *  Make sure you PUSH and POP the registers before       *
-; *  invoking any of these routines                        *
-; **********************************************************
-SETGR   LD  A,0C6H
-        JR  TEST10
-UNSETGR LD  A,86H
-        JR  TEST10
-TEST    LD  A,46H
-TEST10  LD  (INST+1),A
-ADDRES  LD  A,D
-        LD  B,0FFH
-LOOP    INC B
-        SUB 3
-        JP  P,LOOP
-        ADD A,3
-        SLA A
-        LD  C,A
-        LD  L,B
-        LD  H,0
-        LD  B,6
-LOOP1   ADD HL,HL
-        DJNZ LOOP1
-        LD  D,0
-        SRL E
-        JR  NC,CONT
-        INC C
-CONT    ADD HL,DE
-        LD  DE,VIDEO
-        ADD HL,DE
-        SLA C
-        SLA C
-        SLA C
-        LD  A,(INST+1)
-        ADD A,C
-        LD  (INST+1),A
-INST    DEFB    0CBH
-        DEFB    0
-        SET     7,(HL)
-        RET
-
 
 ; * generates a random number from 0 - 255 (best used as a seed value, because it's not
 ; * especially random
@@ -401,6 +362,109 @@ RANDR    PUSH   BC
          POP    BC
          ret
 
+; |--------------------------------------------------------------------------------------|
+; | Graphics routine                                                                     |
+; | This routine uses the PARMBLK block of parameters.  Set them before calling          |
+; |--------------------------------------------------------------------------------------|
+FSETGR   PUSH    AF
+         PUSH    BC
+         PUSH    DE
+         PUSH    HL
+         PUSH    IX
+         PUSH    IY
+
+         LD      IX,PARMBLK
+         LD      D,0
+         LD      E,(IX+3)
+         SLA     E
+         LD      L,(IX+0)
+         LD      H,(IX+1)
+         ADD     HL,DE
+         LD      BC,TABLEA
+         ADD     HL,BC
+         PUSH    HL
+         POP     IY
+         LD      A,(IY+0)
+         AND     0E0H
+         LD      L,A
+         LD      H,(IY+1)
+         LD      E,(IX+2)
+         LD      D,0
+         SRL     E
+         ADD     HL,DE
+         LD      A,(IY+0)
+         AND     1FH
+         BIT     0,(IX+2)
+         JR      Z,FSE020
+         SLA     A
+FSE020   LD      B,(HL)
+         BIT     0,(IX+4)
+         JR      Z,FSE030
+         CPL
+         AND     B
+         JR      FSE040
+FSE030   OR      B
+FSE040   LD      (HL),A
+         POP     IY
+         POP     IX
+         POP     HL
+         POP     DE
+         POP     BC
+         POP     AF
+         RET
+
+TABLEA   EQU     $-FSETGR
+         DEFW    3C00H+1
+         DEFW    3C00H+4
+         DEFW    3C00H+16
+         DEFW    3C40H+1
+         DEFW    3C40H+4
+         DEFW    3C40H+16
+         DEFW    3C80H+1
+         DEFW    3C80H+4
+         DEFW    3C80H+16
+         DEFW    3CC0H+1
+         DEFW    3CC0H+4
+         DEFW    3CC0H+16
+         DEFW    3D00H+1
+         DEFW    3D00H+4
+         DEFW    3D00H+16
+         DEFW    3D40H+1
+         DEFW    3D40H+4
+         DEFW    3D40H+16
+         DEFW    3D80H+1
+         DEFW    3D80H+4
+         DEFW    3D80H+16
+         DEFW    3DC0H+1
+         DEFW    3DC0H+4
+         DEFW    3DC0H+16
+         DEFW    3E00H+1
+         DEFW    3E00H+4
+         DEFW    3E00H+16
+         DEFW    3E40H+1
+         DEFW    3E40H+4
+         DEFW    3E40H+16
+         DEFW    3E80H+1
+         DEFW    3E80H+4
+         DEFW    3E80H+16
+         DEFW    3EC0H+1
+         DEFW    3EC0H+4
+         DEFW    3EC0H+16
+         DEFW    3F00H+1
+         DEFW    3F00H+4
+         DEFW    3F00H+16
+         DEFW    3F40H+1
+         DEFW    3F40H+4
+         DEFW    3F40H+16
+         DEFW    3F80H+1
+         DEFW    3F80H+4
+         DEFW    3F80H+16
+         DEFW    3FC0H+1
+         DEFW    3FC0H+4
+         DEFW    3FC0H+16
+
+
+
 ; ###############################################################
 ; # DATA SECTION                                                #
 ; ###############################################################
@@ -410,4 +474,8 @@ XINCS    DS   4    ; 4 x increment values
 YINCS    DS   4    ; 4 y increment values 
 SEED     DS   1    ; seed value for random numbers
 
+PARMBLK  DS   2    ; Address of graphics block routine
+PARMX    DS   1    ; X address for graphics SET/RESET
+PARMY    DS   1    ; Y address for graphics SET/RESET
+PARMMODE DS   1    ; SET/RESET mode (SET=0, RESET=1)
         END
