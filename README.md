@@ -31,7 +31,7 @@ figured I'd start simple and if I need to implement interrupts I'll have to dig 
 
 **Be Aware**:  I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
 I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
-"40 year old museum piece" while I figure out how to get the glue code working properly.
+"40 year old museum piece" while I figure out how to get the "glue" working properly.
 
 Theory of Operation
 ===================
