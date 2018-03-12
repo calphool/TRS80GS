@@ -19,10 +19,11 @@ const int dataPin  = 11;
 volatile unsigned int j;
 
 void setup() {
+  DDRC = B00111111;             // turn all the pins on PORTC (the analog pins) on
+
   pinMode(latchPin, OUTPUT);    // set latch as output mode
   pinMode(clockPin, OUTPUT);    // set clock as output mode
   pinMode(dataPin, OUTPUT);     // set data as output mode
-  DDRC = B00111111;             // turn all the pins on PORTC (the analog pins) on
   digitalWrite(latchPin, HIGH); // turn on the latch
   digitalWrite(clockPin, LOW);  // turn off the clock
   digitalWrite(dataPin, LOW);   // turn off any data
