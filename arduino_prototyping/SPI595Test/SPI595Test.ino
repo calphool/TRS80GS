@@ -41,36 +41,33 @@ void setup() {
   delay(200);
 
   // register 0
-  writeData(B00000000);        // graphics mode 1, no external video
-  writeData(B10000000);        // command for register 0
+  writeRegister(0, B00000000);  // graphics mode 1, no external video
 
   // register 1
-  writeData(B11000000);        // 16k, Enable display, Disable interrupts, 8x8 sprites, magnification off
-  writeData(B10000001);        // command for register 1
+  writeRegister(1, B11000000); // 16k, Enable display, Disable interrupts, 8x8 sprites, magnification off
 
   // register 2
-  writeData(B00000101);        // address of name table in VRAM = 0x1400
-  writeData(B10000010);        // command for register 2
+  writeRegister(2, B00000101); // address of name table in VRAM = 0x1400
 
   // register 3
-  writeData(B10000000);        // address of color table in VRAM = 0x2000
-  writeData(B10000011);        // command for register 3
+  writeRegister(3, B10000000); // address of color table in VRAM = 0x2000
 
-  // register 4 
-  writeData(B00000001);        // address of pattern table in VRAM = 0x0800
-  writeData(B10000100);        // command for register 4
+  // register 4  
+  writeRegister(4, B00000001); // address of pattern table in VRAM = 0x0800
 
-  // register 5  
-  writeData(B00100000);        // address of sprite attribute table in VRAM = 0x1000
-  writeData(B10000101);        // command for register 5
+  // register 5 
+  writeRegister(5, B00100000); // address of sprite attribute table in VRAM = 0x1000
 
   // register 6
-  writeData(B00000000);        // address of sprite pattern table in VRAM = 0x0000
-  writeData(B10000110);        // command for register 6
+  writeRegister(6, B00000000); // address of sprite pattern table in VRAM = 0x0000
 
   // register 7
-  writeData(B00000011);        // set background color 
-  writeData(B10000111);        // command for register 7
+  writeRegister(7, B00000011);// set background color
+}
+
+inline void writeRegister(byte reg, byte data) {
+  writeData(data);
+  writeData(reg | 128);
 }
 
 inline void writeData(unsigned int u) {
@@ -99,8 +96,7 @@ inline void writeData(unsigned int u) {
 
 void loop() {
   for (int i = 1; i < 16; i++) {
-    writeData(i);            // set background color 
-    writeData(B10000111);    // register 7
-    delay(500);
+    writeRegister(7,i);
+    delay(1000);
   }
 }
