@@ -1,0 +1,127 @@
+Name     TRS80GS;
+PartNo   TRS80GS;
+Date     3/23/2018 ;
+Revision 01 ;
+Designer Joe Rounceville ;
+Company  SoftObject System ;
+Assembly None ;
+Location ;
+Device   g22v10;
+
+/* *************** INPUT PINS *********************/
+PIN   2  =  a_zero                      ; /*          LSB - A0 (spelled out because of compiler issues */ 
+PIN   3  =  a_one                       ; /*                A1               */ 
+PIN   5  =  a_two                       ; /*                A2               */ 
+PIN   6  =  a_three                     ; /*                A3               */ 
+PIN   7  =  a_four                      ; /*                A4               */ 
+PIN   8  =  a_five                      ; /*                A5               */ 
+PIN   9  =  a_six                       ; /*                A6               */ 
+PIN   10  = a_seven                     ; /*                A7               */ 
+PIN   11  = dev_in                      ; /*  active low    INP              */ 
+PIN   13  = dev_out                     ; /*  active low    OUT              */ 
+
+/* *************** OUTPUT PINS *********************/
+PIN   16  = mode                        ; /*  (0=VRAM, 1=VPD)              */ 
+PIN   22  = csw                         ; /*  active low                   */ 
+PIN   21  = csr                         ; /*  active low                   */ 
+PIN   20  = snd1                        ; /*  active low                   */ 
+PIN   19  = snd2                        ; /*  active low                   */ 
+PIN   18  = joy1                        ; /*  active low                   */ 
+PIN   17  = joy2                        ; /*  active low                   */ 
+
+
+/* lookup */
+
+field mode_inputs = [dev_in,dev_out,a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero];
+field mode_outputs = [mode];
+
+TABLE mode_inputs => mode_outputs {
+ 'b'0110000000=>'b'0;
+ 'b'1010000000=>'b'0;
+ 'b'0110000001=>'b'1;
+ 'b'1010000001=>'b'1;
+}
+
+
+
+field csr_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_in];
+field csr_outputs = [csr];
+
+TABLE csr_inputs => csr_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'0;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'0;
+ 'b'100000011=>'b'1;
+['b'100000100..'b'111111111]=>'b'1;
+}
+
+field csw_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_out];
+field csw_outputs = [csw];
+
+TABLE csw_inputs => csw_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'0;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'0;
+ 'b'100000011=>'b'1;
+['b'100000100..'b'111111111]=>'b'1;
+}
+
+field snd1_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_out];
+field snd1_outputs = [snd1];
+
+TABLE snd1_inputs => snd1_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'1;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'1;
+ 'b'100000011=>'b'1;
+ 'b'100000100=>'b'0;
+['b'100000101..'b'111111111]=>'b'1;
+}
+
+field snd2_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_out];
+field snd2_outputs = [snd2];
+
+TABLE snd2_inputs => snd2_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'1;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'1;
+ 'b'100000011=>'b'1;
+ 'b'100000100=>'b'1;
+ 'b'100000101=>'b'1;
+ 'b'100000110=>'b'0;
+['b'100000111..'b'111111111]=>'b'1;
+}
+
+
+field joy1_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_in];
+field joy1_outputs = [joy1];
+
+TABLE joy1_inputs => joy1_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'1;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'1;
+ 'b'100000011=>'b'1;
+ 'b'100000100=>'b'0;
+['b'100000101..'b'111111111]=>'b'1;
+}
+
+field joy2_inputs = [a_seven,a_six,a_five,a_four,a_three,a_two,a_one,a_zero,dev_in];
+field joy2_outputs = [joy2];
+
+TABLE joy2_inputs => joy2_outputs {
+['b'000000000..011111111]=>'b'1;
+ 'b'100000000=>'b'1;
+ 'b'100000001=>'b'1;
+ 'b'100000010=>'b'1;
+ 'b'100000011=>'b'1;
+ 'b'100000100=>'b'1;
+ 'b'100000101=>'b'1;
+ 'b'100000110=>'b'0;
+['b'100000111..'b'111111111]=>'b'1;
+}
+
