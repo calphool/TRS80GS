@@ -1,0 +1,42 @@
+Name     MEM_MODULE ;
+PartNo   00 ;
+Date     3/29/2018 ;
+Revision 01 ;
+Designer Engineer ;
+Company  SoftObject ;
+Assembly None ;
+Location  ;
+Device   g16v8a;
+
+/* *************** INPUT PINS *********************/
+PIN  2 = WRN                    ; /*   WR/                            */ 
+PIN  3 = RDN                     ; /*   RD/                            */ 
+PIN  4 = A15_T                    ; /*   A15                            */ 
+PIN  5 = CE                      ; /*   CE                             */ 
+
+/* *************** OUTPUT PINS *********************/
+PIN  19 = WAIT_N                    ; /*  WAIT/                          */ 
+PIN  18 = RDH_N                    ; /*  RDH/                           */ 
+
+
+field the_inputs = [WRN,RDN,A15_T,CE];
+field the_outputs = [WAIT_N,RDH_N];
+
+TABLE the_inputs => the_outputs {
+ 'b'0000=>'b'11;
+ 'b'0001=>'b'11;
+ 'b'0010=>'b'11;
+ 'b'0011=>'b'11;
+ 'b'0100=>'b'11;
+ 'b'0101=>'b'11;
+ 'b'0110=>'b'11;
+ 'b'0111=>'b'01;
+ 'b'1000=>'b'11;
+ 'b'1001=>'b'11;
+ 'b'1010=>'b'11;
+ 'b'1011=>'b'00;
+ 'b'1100=>'b'11;
+ 'b'1101=>'b'11;
+ 'b'1110=>'b'11;
+ 'b'1111=>'b'11;
+}
