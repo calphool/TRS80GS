@@ -1,7 +1,7 @@
 # TRS80GS
 Storage area for my TRS-80 Model 1 Graphics, Sound, and Gaming cartidge
 
-![Photo of prototype PCB](/img/TRS80GS/img/TRS-80 Model 1 GraphicsSoundJoystick Card Prototype - Imgur.jpg?raw=true "Prototype PCB")
+![Photo of prototype PCB](/img/TRS-80%20Model%201%20GraphicsSoundJoystick%20Card%20Prototype%20-%20Imgur.jpg?raw=true "Prototype PCB")
 
 
 My friend's first computer was a 1977 TRS-80 Model 1.  I'm a few years younger than him, so my first computer was a TI-99/4A, 
