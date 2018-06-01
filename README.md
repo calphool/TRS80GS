@@ -38,11 +38,15 @@ I get finished testing the components individually with an Arduino as a kind of 
 Theory of Operation
 ===================
 
-If you examine the schematic for the board, you can see that it's got a bunch of decoding logic, and some SPDT dip switches.  The theory here 
+~~If you examine the *original* schematic for the board, you can see that it's got a bunch of decoding logic, and some SPDT dip switches.  The theory here 
 is that I'm attaching the decoding logic to the lower half of [the expansion port's address bus](http://www.classiccmp.org/cpmarchives/trs80/mirrors/kjsl/www.kjsl.com/trs80/mod1intern.html) 
 and using the OUT* and IN* pins to decide what we're doing.  In this way, the port address numbers will be adjustable.  
 I'm hard wiring bit zero as a toggle bit though, so really you're adjusting the 7 most significant bits, and bit zero toggles 
-between related devices or related pins on a device.
+between related devices or related pins on a device.~~
+
+Nope, we pivoted on the design by rev2.  We got rid of silly things like glue logic chips and SPDT dip switches, and simply added 
+a CPLD that manages *all* of the decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
+"adjust" the addresses in code now, not with SPDT dip switches (what was I thinking?)
 
 TMS9118A
 --------
