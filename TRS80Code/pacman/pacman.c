@@ -86,6 +86,151 @@ unsigned char getRRegister() {
 }
 
 
+
+unsigned char getKeyboard() {
+    void *addr;
+    unsigned char val;
+
+    addr = 0x3801;
+
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return 'G';
+      if(val >= 64)
+        return 'F';
+      if(val >= 32)
+        return 'E';
+      if(val >= 16)
+        return 'D';
+      if(val >= 8)
+        return 'C';
+      if(val >= 4)
+        return 'B';
+      if(val >= 2)
+        return 'A';
+      return '@';
+    }
+    addr = 0x3802;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return 'O';
+      if(val >= 64)
+        return 'N';
+      if(val >= 32)
+        return 'M';
+      if(val >= 16)
+        return 'L';
+      if(val >= 8)
+        return 'K';
+      if(val >= 4)
+        return 'J';
+      if(val >= 2)
+        return 'I';
+      return 'H';
+    }
+    addr = 0x3804;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return 'W';
+      if(val >= 64)
+        return 'V';
+      if(val >= 32)
+        return 'U';
+      if(val >= 16)
+        return 'T';
+      if(val >= 8)
+        return 'S';
+      if(val >= 4)
+        return 'R';
+      if(val >= 2)
+        return 'Q';
+      return 'P';
+    }
+    addr = 0x3808;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return 0;
+      if(val >= 64)
+        return 0;
+      if(val >= 32)
+        return 0;
+      if(val >= 16)
+        return 0;
+      if(val >= 8)
+        return ',';
+      if(val >= 4)
+        return 'Z';
+      if(val >= 2)
+        return 'Y';
+      return 'X';
+    }
+    addr = 0x3810;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return '7';
+      if(val >= 64)
+        return '6';
+      if(val >= 32)
+        return '5';
+      if(val >= 16)
+        return '4';
+      if(val >= 8)
+        return '3';
+      if(val >= 4)
+        return '2';
+      if(val >= 2)
+        return '1';
+      return '0';
+    }
+    addr = 0x3820;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return '/';
+      if(val >= 64)
+        return '.';
+      if(val >= 32)
+        return '-';
+      if(val >= 16)
+        return ',';
+      if(val >= 8)
+        return ';';
+      if(val >= 4)
+        return ':';
+      if(val >= 2)
+        return '9';
+      return '8';
+    }
+    addr = 0x3840;
+    val = *((char*)addr);
+    if(val > 0) {
+      if(val >= 128)
+        return ' ';
+      if(val >= 64)
+        return 94;
+      if(val >= 32)
+        return 93;
+      if(val >= 16)
+        return 91;
+      if(val >= 8)
+        return 92;
+      if(val >= 4)
+        return 96;
+      if(val >= 2)
+        return 10;
+      return 13;
+    }
+    return 0;
+}
+
+
+
+
 void setVDPRegister(unsigned char reg,unsigned char dat) {
     PORTX81 = dat;
     reg=reg+128;
@@ -192,27 +337,72 @@ void setPatterns() {
    
    for(i=0;i<256;i++)
        setCharPattern(i,"0000000000000000");
-     
-   SETPATTERN('a',"8181818181818181");
-   SETPATTERN('b',"FF000000000000FF");
-   SETPATTERN('c',"3C42818181818181");
-   SETPATTERN('d',"3F4080808080403F");
-   SETPATTERN('e',"818181818181423C");
-   SETPATTERN('f',"FC020101010102FC");
-   SETPATTERN('g',"00000000000000FF");
-   SETPATTERN('h',"8080808080808080");
-   SETPATTERN('i',"FF00000000000000");
-   SETPATTERN('j',"0101010101010101");
-   SETPATTERN('k',"3F40808080808080");
-   SETPATTERN('l',"FC02010101010101");
-   SETPATTERN('m',"01010101010102FC");
-   SETPATTERN('n',"808080808080403F");
+   
 
+                                        //     SHAPE  
+   SETPATTERN('a',"8181818181818181");  //      | |   
+                                        //      | |   
+
+   SETPATTERN('b',"FF000000000000FF");  //      ___  
+                                        //      ---   
+
+   SETPATTERN('c',"3C42818181818181");  //      .--.
+                                        //      |  |  
+
+   SETPATTERN('d',"3F4080808080403F");  //       ___
+                                        //      {___  
+
+   SETPATTERN('e',"818181818181423C");  //      |  |
+                                        //      '--'  
+
+   SETPATTERN('f',"FC020101010102FC");  //       ___
+                                        //       ___}
+                                               
+   SETPATTERN('g',"00000000000000FF");  //       ___
+
+
+   SETPATTERN('h',"8080808080808080");  //       |
+                                        //       |
+
+   SETPATTERN('i',"FF00000000000000");  //       --
+                                        //
+
+   SETPATTERN('j',"0101010101010101");  //         |
+                                        //         |
+
+   SETPATTERN('k',"3F40808080808080");  //       ___
+                                        //      |
+
+   SETPATTERN('l',"FC02010101010101");  //       ___
+                                        //          |
+
+   SETPATTERN('m',"01010101010102FC");  //          |
+                                        //       ___|
+
+   SETPATTERN('n',"808080808080403F");  //       |
+                                        //       |___
+
+   SETPATTERN('o',"0000000000000001");  //          .
+
+
+   SETPATTERN('p',"0000000000000080");  //         .
+
+
+   SETPATTERN('q',"0100000000000000");  //          '
+
+   
+   SETPATTERN('r',"8000000000000000");  //         '
+
+/*
    SETPATTERN('A',"788484FC84848400");
    SETPATTERN('B',"F88484F88484F800");
+*/
    SETPATTERN('C',"7884808080847800");
+/*
    SETPATTERN('D',"F88484848484F800");
+*/
    SETPATTERN('E',"FC8080F88080FC00");
+/*
    SETPATTERN('F',"FC8080F880808000");
    SETPATTERN('G',"788080BC84847800");
    SETPATTERN('H',"848484FC84848400");
@@ -222,11 +412,15 @@ void setPatterns() {
    SETPATTERN('L',"808080808080FC00");
    SETPATTERN('M',"84CCB4B484848400");
    SETPATTERN('N',"84C4A4A4948C8400");
+*/
    SETPATTERN('O',"7884848484847800");
+/*
    SETPATTERN('P',"F88484F880808000");
    SETPATTERN('Q',"78848484948C7C00");
+*/
    SETPATTERN('R',"F88488F088888400");
    SETPATTERN('S',"7C8080780404F800");
+/*
    SETPATTERN('T',"FC30303030303000");
    SETPATTERN('U',"8484848484847800");
    SETPATTERN('V',"8484844848483000");
@@ -244,6 +438,7 @@ void setPatterns() {
    SETPATTERN('7',"FC0C181830306000");
    SETPATTERN('8',"7884847884847800");
    SETPATTERN('9',"7884847C04087000");
+*/
    SETPATTERN(':',"0030300000303000");
 }
 
@@ -321,7 +516,7 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
       addr = addr + (spriteNumber << 3);
   
   d=0;
-  for(x=0;x<strlen(patt);x++) {
+  for(x=0;x<strlen(patt);x=x+2) {
         duple[0] = *(patt+x);
         duple[1] = *(patt+x+1);
         setVDPRAM(addr+d,(unsigned char)strtol(duple, NULL, 16));
@@ -330,11 +525,10 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
 }
 
 
-void setSpriteAttribute(unsigned char spriteNum, unsigned int x, unsigned int y, unsigned char color) {
+void setSpriteAttribute(unsigned char spriteNum, unsigned int x, unsigned int y, unsigned char color, unsigned char patternNumber) {
   unsigned int addr = g.SpriteAttrTableAddr + (spriteNum << 2);
   unsigned char vert;
   unsigned char horiz;
-  unsigned char name;
   unsigned char b5;
 
   b5 = color;
@@ -345,13 +539,9 @@ void setSpriteAttribute(unsigned char spriteNum, unsigned int x, unsigned int y,
   else 
      horiz = horiz - 32;
   
-  name = spriteNum;
-  if(g.sprites16x16Enabled == TRUE)
-      name = name << 2;  
-
   setVDPRAM(addr, vert);
   setVDPRAM(addr+1, horiz);
-  setVDPRAM(addr+2, name);
+  setVDPRAM(addr+2, patternNumber*4);
   setVDPRAM(addr+3, b5);
 }
 
@@ -369,15 +559,17 @@ void drawMaze() {
 
 
   for(j=0;j<32;j++)
-     setCharacterGroupColor(j, WHITE, BLACK);
+     setCharacterGroupColor(j, DARKBLUE, BLACK);
   for(j=8;j<=11;j++)
      setCharacterGroupColor(j, DARKRED, BLACK);
   for(j=6;j<=7;j++)
-     setCharacterGroupColor(j, DARKBLUE, BLACK);
+     setCharacterGroupColor(j, WHITE, BLACK);
 
-  for(j=0;j<32;j++)
-    for(k=0;k<24;k++)
-      setCharacterAt(k,j,' ');
+
+  for(k=0;k<24;k++)
+      for(j=0;j<32;j++)
+          setCharacterAt(j,k,' ');
+  
 
    for(j=3;j<=9;j++) {
        setCharacterAt(0,j,'a');
@@ -508,19 +700,22 @@ void drawMaze() {
 
 int main()
 {
-   unsigned int j;
+   int j;
+   int dir = 1;
    unsigned int k;
    unsigned int i;
+   unsigned int anPos = 0;
+   int anDir = 1;
 
    clearTRSScreen();
 
-   printf("TURNING OFF AUDIO...\n");
+   printf("AUDIO OFF\n");
    audioSilence();
 
-   printf("SEEDING RANDOMNESS...\n");
+   printf("SEEDING RNG\n");
    srand(getRRegister());
 
-   printf("SETTING UP GRAPHICS MODE...\n");
+   printf("GRAPHICS MODE SETUP\n");
 
    g.graphicsMode = GRAPHICSMODE1;
    g.externalVideoEnabled = FALSE;
@@ -531,16 +726,42 @@ int main()
    g.backgroundColor = BLACK;
    setGraphicsMode();
 
-   printf("SETTING TEXT PATTERNS...\n");
+   printf("SETUP TEXT PATS\n");
    setPatterns();
 
-   printf("SETTING UP MAZE...\n");
+   printf("SETUP MAZE\n");
    drawMaze();
-/*
-   printf("INITIALIZING SPRITE PATTERNS...\n");
-   for(i=0;i<32;i++) 
-     setSpritePattern(i,"3C42A9A985D9423C");
 
+   printf("INIT SPRITE PATS\n");
+   setSpritePattern(0,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFFFF00FFFFFFFFFEFCF8F0");  // PACMAN, mouth closed (right)
+   setSpritePattern(1,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFEE000E0FEFFFFFEFCF8F0");  // PACMAN, mouth open 1 (right)
+   setSpritePattern(2,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBFFEF8C000C0F0F8FCFFFCF8F0");  // PACMAN, mouth open 2 (right)
+   setSpritePattern(3,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEF8E0800080C0E0F8FEFCF8F0");  // PACMAN, mouth open 3 (right)
+
+   sprAttr[0].x = 112;
+   sprAttr[0].y = 95;
+   sprAttr[0].color = DARKYELLOW;
+
+
+   printf("ANIMATE SPRITE\n");
+ 
+   k=0;
+   while(k==0) {
+      k = getKeyboard();
+        sprAttr[0].x = sprAttr[0].x  + dir;
+        if(sprAttr[0].x > 255 || sprAttr[0].x <1)
+          dir = -dir;
+
+        anPos = anPos + anDir;
+        if(anPos > 2 || anPos < 1)
+          anDir = -anDir;
+   
+         setSpriteAttribute(0, sprAttr[0].x, sprAttr[0].y, sprAttr[0].color,anPos);
+   }
+   printf("DONE!");
+   exit(-1);
+
+/*
    printf("INITIALIZING SPRITE ATTRIBUTES...\n");
    for(int i=0;i<32;i++) {
      sprAttr[i].x = rand()%288;
