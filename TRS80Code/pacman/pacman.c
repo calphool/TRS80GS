@@ -58,8 +58,8 @@ typedef struct {
 } graphicsSetup;
 
 typedef struct {
-  unsigned int x;
-  unsigned int y;
+  int x;
+  int y;
   unsigned char color;
   int xdir;
   int ydir;
@@ -67,7 +67,9 @@ typedef struct {
 
 
 
-
+unsigned char bRunning = TRUE;
+unsigned int anPos = 0;
+int anDir = 1;
 graphicsSetup g;
 spriteAttr sprAttr[32];
 
@@ -84,150 +86,6 @@ unsigned char getRRegister() {
     ld l,a
     #pragma endasm
 }
-
-
-
-unsigned char getKeyboard() {
-    void *addr;
-    unsigned char val;
-
-    addr = 0x3801;
-
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return 'G';
-      if(val >= 64)
-        return 'F';
-      if(val >= 32)
-        return 'E';
-      if(val >= 16)
-        return 'D';
-      if(val >= 8)
-        return 'C';
-      if(val >= 4)
-        return 'B';
-      if(val >= 2)
-        return 'A';
-      return '@';
-    }
-    addr = 0x3802;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return 'O';
-      if(val >= 64)
-        return 'N';
-      if(val >= 32)
-        return 'M';
-      if(val >= 16)
-        return 'L';
-      if(val >= 8)
-        return 'K';
-      if(val >= 4)
-        return 'J';
-      if(val >= 2)
-        return 'I';
-      return 'H';
-    }
-    addr = 0x3804;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return 'W';
-      if(val >= 64)
-        return 'V';
-      if(val >= 32)
-        return 'U';
-      if(val >= 16)
-        return 'T';
-      if(val >= 8)
-        return 'S';
-      if(val >= 4)
-        return 'R';
-      if(val >= 2)
-        return 'Q';
-      return 'P';
-    }
-    addr = 0x3808;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return 0;
-      if(val >= 64)
-        return 0;
-      if(val >= 32)
-        return 0;
-      if(val >= 16)
-        return 0;
-      if(val >= 8)
-        return ',';
-      if(val >= 4)
-        return 'Z';
-      if(val >= 2)
-        return 'Y';
-      return 'X';
-    }
-    addr = 0x3810;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return '7';
-      if(val >= 64)
-        return '6';
-      if(val >= 32)
-        return '5';
-      if(val >= 16)
-        return '4';
-      if(val >= 8)
-        return '3';
-      if(val >= 4)
-        return '2';
-      if(val >= 2)
-        return '1';
-      return '0';
-    }
-    addr = 0x3820;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return '/';
-      if(val >= 64)
-        return '.';
-      if(val >= 32)
-        return '-';
-      if(val >= 16)
-        return ',';
-      if(val >= 8)
-        return ';';
-      if(val >= 4)
-        return ':';
-      if(val >= 2)
-        return '9';
-      return '8';
-    }
-    addr = 0x3840;
-    val = *((char*)addr);
-    if(val > 0) {
-      if(val >= 128)
-        return ' ';
-      if(val >= 64)
-        return 94;
-      if(val >= 32)
-        return 93;
-      if(val >= 16)
-        return 91;
-      if(val >= 8)
-        return 92;
-      if(val >= 4)
-        return 96;
-      if(val >= 2)
-        return 10;
-      return 13;
-    }
-    return 0;
-}
-
 
 
 
@@ -428,6 +286,7 @@ void setPatterns() {
    SETPATTERN('X',"8484483048848400");
    SETPATTERN('Y',"8448483030303000");
    SETPATTERN('Z',"FC0810102040FC00");
+   */
    SETPATTERN('0',"788C94B4A4C47800");
    SETPATTERN('1',"307030303030FC00");
    SETPATTERN('2',"788484186080FC00");
@@ -438,8 +297,8 @@ void setPatterns() {
    SETPATTERN('7',"FC0C181830306000");
    SETPATTERN('8',"7884847884847800");
    SETPATTERN('9',"7884847C04087000");
-*/
    SETPATTERN(':',"0030300000303000");
+   SETPATTERN('-',"0000007E00000000");
 }
 
 void audioSilence() {
@@ -525,23 +384,31 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
 }
 
 
-void setSpriteAttribute(unsigned char spriteNum, unsigned int x, unsigned int y, unsigned char color, unsigned char patternNumber) {
+ void setSpriteAttribute(unsigned char spriteNum, int x, unsigned int y, unsigned char color, unsigned char patternNumber) {
   unsigned int addr = g.SpriteAttrTableAddr + (spriteNum << 2);
   unsigned char vert;
-  unsigned char horiz;
+  int horiz;
   unsigned char b5;
 
   b5 = color;
-  vert = y - 32;
-  horiz = x;
-  if(horiz < 32)
+  vert = y ;
+
+  if(x<0) {
     b5 = b5 | 0x80;
-  else 
-     horiz = horiz - 32;
+    x = x + 32;
+  }
+  horiz = x ;
+
+  /*
+  if(horiz < 0) {
+    b5 = b5 | 0x80;
+    horiz = 32 - x;
+  }
+  */
   
   setVDPRAM(addr, vert);
-  setVDPRAM(addr+1, horiz);
-  setVDPRAM(addr+2, patternNumber*4);
+  setVDPRAM(addr+1, (unsigned char)horiz);
+  setVDPRAM(addr+2, patternNumber<<2);
   setVDPRAM(addr+3, b5);
 }
 
@@ -586,7 +453,7 @@ void drawMaze() {
        setCharacterAt(j,23,'g');
    }
 
-   setCharactersAt(9,0,"SCORE: 9999999");
+   setCharactersAt(18,0,"SCORE: 9999999");
 
    for(j=5;j<=9;j++) {
        setCharacterAt(3, j, 'a');
@@ -698,14 +565,60 @@ void drawMaze() {
 }
 
 
+void movePacman() {
+    sprAttr[0].x = sprAttr[0].x + sprAttr[0].xdir;
+    sprAttr[0].y = sprAttr[0].y + sprAttr[0].ydir;
+    if(sprAttr[0].x < -16)
+      sprAttr[0].x = -16;
+    if(sprAttr[0].x > 255)
+      sprAttr[0].x = 255;
+
+    if(sprAttr[0].y < 15)
+      sprAttr[0].y = 15;
+    if(sprAttr[0].y > 175)
+      sprAttr[0].y = 175;
+ 
+    anPos = anPos + anDir;
+    if(anPos > 1 || anPos < 1) 
+      anDir = -anDir;
+   
+    setSpriteAttribute(0, sprAttr[0].x, sprAttr[0].y, sprAttr[0].color,anPos);
+}
+
+void checkControls() {
+        unsigned char k = getJoystick(LEFT_POS);
+        if(k == 191) {
+          sprAttr[0].xdir=2;
+          sprAttr[0].ydir=0;
+        }
+        else
+        if(k == 127) {
+          sprAttr[0].ydir=-2;
+          sprAttr[0].xdir=0;
+        }
+        else
+        if(k == 223) {
+          sprAttr[0].xdir=-2;
+          sprAttr[0].ydir=0;
+        }
+        else
+        if(k == 239) {
+          sprAttr[0].ydir=2;
+          sprAttr[0].xdir=0;
+        }
+        else
+        if(k == 247)
+              bRunning = FALSE;
+}
+
+
 int main()
 {
    int j;
-   int dir = 1;
    unsigned int k;
    unsigned int i;
-   unsigned int anPos = 0;
-   int anDir = 1;
+
+   char buf[33];
 
    clearTRSScreen();
 
@@ -735,8 +648,7 @@ int main()
    printf("INIT SPRITE PATS\n");
    setSpritePattern(0,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFFFF00FFFFFFFFFEFCF8F0");  // PACMAN, mouth closed (right)
    setSpritePattern(1,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFEE000E0FEFFFFFEFCF8F0");  // PACMAN, mouth open 1 (right)
-   setSpritePattern(2,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBFFEF8C000C0F0F8FCFFFCF8F0");  // PACMAN, mouth open 2 (right)
-   setSpritePattern(3,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEF8E0800080C0E0F8FEFCF8F0");  // PACMAN, mouth open 3 (right)
+   setSpritePattern(2,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEF8E0800080C0E0F8FEFCF8F0");  // PACMAN, mouth open 2 (right)
 
    sprAttr[0].x = 112;
    sprAttr[0].y = 95;
@@ -745,44 +657,15 @@ int main()
 
    printf("ANIMATE SPRITE\n");
  
-   k=0;
-   while(k==0) {
-      k = getKeyboard();
-        sprAttr[0].x = sprAttr[0].x  + dir;
-        if(sprAttr[0].x > 255 || sprAttr[0].x <1)
-          dir = -dir;
-
-        anPos = anPos + anDir;
-        if(anPos > 2 || anPos < 1)
-          anDir = -anDir;
    
-         setSpriteAttribute(0, sprAttr[0].x, sprAttr[0].y, sprAttr[0].color,anPos);
+   while(bRunning == TRUE) {
+        checkControls();
+        movePacman();
+        
+        sprintf(buf, "%d:%d:%d    ",sprAttr[0].x, sprAttr[0].y,k);
+        setCharactersAt(0,0,buf);
    }
-   printf("DONE!");
-   exit(-1);
 
-/*
-   printf("INITIALIZING SPRITE ATTRIBUTES...\n");
-   for(int i=0;i<32;i++) {
-     sprAttr[i].x = rand()%288;
-     sprAttr[i].y = rand()%288;
-     sprAttr[i].color = rand()%15+1;
-     sprAttr[i].xdir = rand()%10 - 5;
-     sprAttr[i].ydir = rand()%10 - 5;
-     setSpriteAttribute(i, sprAttr[i].x, sprAttr[i].y, sprAttr[i].color);
-   }
-   
-   printf("MOVING SPRITES AND COLORS...\n");
- 
-   k=0;
-   while(k==0) {
-       k = getKeyboard();
-       updateSprites();
-       for(j=0;j<32;j++)
-           setCharacterGroupColor(j, rand()%15+1, rand()%15+1);
-   }
-   clearTRSScreen();
-   */
    printf("DONE!");
    exit(-1);
 }
