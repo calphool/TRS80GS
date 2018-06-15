@@ -23,6 +23,9 @@
 
 #define SETPATTERN(XXX,YYY) strcpy(buf,YYY); setCharPattern(XXX,buf);
 
+#define PACMAN_SPRITENUM 0
+
+
 
 
 __sfr __at 0x80 PORTX80;
@@ -112,10 +115,22 @@ void setVDPRAM(unsigned int addr, unsigned char dat) {
     PORTX80 = dat;
 }
 
+unsigned char getVDPRAM(unsigned int addr) {
+    static unsigned int addr_2;
+    static unsigned int addr_1;
+    
+    addr_2 = (addr >> 8);
+    addr_1 = addr - (addr_2 << 8);
+
+    PORTX81 = (unsigned char)addr_1;
+    PORTX81 = (unsigned char)addr_2;
+    return PORTX80;
+}
+
 
 void soundOut(unsigned char LeftOrRight, unsigned char dat) {
     if(LeftOrRight == LEFT_POS) 
-	      PORTX82 = dat;
+        PORTX82 = dat;
     else
         PORTX83 = dat; 
 }
@@ -123,7 +138,7 @@ void soundOut(unsigned char LeftOrRight, unsigned char dat) {
 
 unsigned char getJoystick(unsigned char LeftOrRight) {
     if(LeftOrRight == LEFT_POS)
-	      return PORTX83;
+        return PORTX83;
     else
         return PORTX82;
 }
@@ -138,6 +153,18 @@ void setCharacterAt(unsigned char x, unsigned char y, unsigned char c) {
       addr = addr + (y<<5) + x;
 
     setVDPRAM(addr,c);
+}
+
+
+unsigned char getCharAt(unsigned char x, unsigned char y) {
+    unsigned int addr = g.NameTableAddr;
+
+    if(g.graphicsMode == TEXTMODE)
+      addr = addr + (y*40) + x;
+    else
+      addr = addr + (y<<5) + x;
+
+    return getVDPRAM(addr);
 }
 
 
@@ -399,12 +426,6 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
   }
   horiz = x ;
 
-  /*
-  if(horiz < 0) {
-    b5 = b5 | 0x80;
-    horiz = 32 - x;
-  }
-  */
   
   setVDPRAM(addr, vert);
   setVDPRAM(addr+1, (unsigned char)horiz);
@@ -566,45 +587,114 @@ void drawMaze() {
 
 
 void movePacman() {
-    sprAttr[0].x = sprAttr[0].x + sprAttr[0].xdir;
-    sprAttr[0].y = sprAttr[0].y + sprAttr[0].ydir;
-    if(sprAttr[0].x < -16)
-      sprAttr[0].x = -16;
-    if(sprAttr[0].x > 255)
-      sprAttr[0].x = 255;
+  unsigned char c;
+  int x = sprAttr[PACMAN_SPRITENUM].x;
+  int y = sprAttr[PACMAN_SPRITENUM].y;
 
-    if(sprAttr[0].y < 15)
-      sprAttr[0].y = 15;
-    if(sprAttr[0].y > 175)
-      sprAttr[0].y = 175;
+    sprAttr[PACMAN_SPRITENUM].x = x + sprAttr[PACMAN_SPRITENUM].xdir;
+    sprAttr[PACMAN_SPRITENUM].y = y + sprAttr[PACMAN_SPRITENUM].ydir;
+    if(x < -16)
+      sprAttr[PACMAN_SPRITENUM].x = -16;
+    if(x > 255)
+      sprAttr[PACMAN_SPRITENUM].x = 255;
+
+    if(y < 16)
+      sprAttr[PACMAN_SPRITENUM].y = 16;
+    if(y > 175)
+      sprAttr[PACMAN_SPRITENUM].y = 176;
  
     anPos = anPos + anDir;
     if(anPos > 1 || anPos < 1) 
       anDir = -anDir;
    
-    setSpriteAttribute(0, sprAttr[0].x, sprAttr[0].y, sprAttr[0].color,anPos);
+    setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos);
 }
+
+unsigned char canGoLeftOrRight(unsigned char spritenum) {
+    int x = sprAttr[spritenum].x;
+    int y = sprAttr[spritenum].y;
+    if(y == 16 && x >= 8 && x <= 232)
+      return TRUE;
+    if(y == 40 && x <= 184 && x >= 56)
+      return TRUE;
+    if(y == 64 && x >= 80 && x <= 160)
+      return TRUE;
+    if(y == 88) {
+      if(x >= 0 && x <= 32)
+        return TRUE;
+      if(x >= 56 && x <= 80)
+        return TRUE;
+      if(x >= 160 && x <= 184)
+        return TRUE;
+      if(x >= 208 && x <= 240)
+        return TRUE;
+    }
+    if(y == 104 && x >= 80 && x <= 160)
+      return TRUE;
+    if(y == 128 && x >= 56 && x <= 184)
+      return TRUE;
+    if(y == 152 && x >= 32 && x <= 208)
+      return TRUE;
+    if(y == 176 && x >= 8 && x <= 232)
+      return TRUE;
+
+    return FALSE;
+}
+
+
+unsigned char canGoUpOrDown(unsigned char spritenum) {
+    int x = sprAttr[spritenum].x;
+    int y = sprAttr[spritenum].y;
+
+    if(x == 8 && y >= 16 && y <= 176)
+      return TRUE;
+    if(x == 32 && y >= 16 && y <= 176)
+      return TRUE;
+    if(x == 56 && y >= 16 && y <= 152)
+      return TRUE;
+    if(x == 80 && y >= 64 && y <= 104)
+      return TRUE;
+    if(x == 96 && y >= 104 && y <= 128)
+      return TRUE;
+    if(x == 120) {
+      if(y >= 40 && y <= 72)
+         return TRUE;
+      if(y >= 128 && y <= 152)
+         return TRUE;
+    }
+    if(x == 144 && y >= 104 && y <= 128)
+      return TRUE;
+    if(x == 184 && y >= 16 && y <= 152)
+      return TRUE;
+    if(x == 208 && y >= 16 && y <= 176)
+      return TRUE;
+    if(x == 232 && y >= 16 && y <= 176)
+      return TRUE;
+
+    return FALSE;
+}
+
 
 void checkControls() {
         unsigned char k = getJoystick(LEFT_POS);
-        if(k == 191) {
-          sprAttr[0].xdir=2;
-          sprAttr[0].ydir=0;
+        if(k == 191 && canGoLeftOrRight(PACMAN_SPRITENUM)) {
+          sprAttr[PACMAN_SPRITENUM].xdir=2;
+          sprAttr[PACMAN_SPRITENUM].ydir=0;
         }
         else
-        if(k == 127) {
-          sprAttr[0].ydir=-2;
-          sprAttr[0].xdir=0;
+        if(k == 127 && canGoUpOrDown(PACMAN_SPRITENUM)) {
+          sprAttr[PACMAN_SPRITENUM].ydir=-2;
+          sprAttr[PACMAN_SPRITENUM].xdir=0;
         }
         else
-        if(k == 223) {
-          sprAttr[0].xdir=-2;
-          sprAttr[0].ydir=0;
+        if(k == 223 && canGoLeftOrRight(PACMAN_SPRITENUM)) {
+          sprAttr[PACMAN_SPRITENUM].xdir=-2;
+          sprAttr[PACMAN_SPRITENUM].ydir=0;
         }
         else
-        if(k == 239) {
-          sprAttr[0].ydir=2;
-          sprAttr[0].xdir=0;
+        if(k == 239 && canGoUpOrDown(PACMAN_SPRITENUM)) {
+          sprAttr[PACMAN_SPRITENUM].ydir=2;
+          sprAttr[PACMAN_SPRITENUM].xdir=0;
         }
         else
         if(k == 247)
@@ -650,9 +740,9 @@ int main()
    setSpritePattern(1,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFEE000E0FEFFFFFEFCF8F0");  // PACMAN, mouth open 1 (right)
    setSpritePattern(2,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEF8E0800080C0E0F8FEFCF8F0");  // PACMAN, mouth open 2 (right)
 
-   sprAttr[0].x = 112;
-   sprAttr[0].y = 95;
-   sprAttr[0].color = DARKYELLOW;
+   sprAttr[PACMAN_SPRITENUM].x = 8;
+   sprAttr[PACMAN_SPRITENUM].y = 16;
+   sprAttr[PACMAN_SPRITENUM].color = DARKYELLOW;
 
 
    printf("ANIMATE SPRITE\n");
@@ -662,7 +752,7 @@ int main()
         checkControls();
         movePacman();
         
-        sprintf(buf, "%d:%d:%d    ",sprAttr[0].x, sprAttr[0].y,k);
+        sprintf(buf, "%d:%d    ",sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y);
         setCharactersAt(0,0,buf);
    }
 
