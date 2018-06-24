@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "notedata.c"
 
 #define LEFT_POS 0x82
 #define RIGHT_POS 0x83
@@ -714,6 +715,9 @@ int main()
 
    printf("AUDIO OFF\n");
    audioSilence();
+
+   printf("SETUP AUDIO\n");
+   initNoteData();
 
    printf("SEEDING RNG\n");
    srand(getRRegister());
