@@ -26,13 +26,20 @@
 
 #define PACMAN_SPRITENUM 0
 
+#define EAST_PACMAN_PAT_OFFSET 0
+#define NORTH_PACMAN_PAT_OFFSET 3 
+#define WEST_PACMAN_PAT_OFFSET 6
+#define SOUTH_PACMAN_PAT_OFFSET 9
 
-
+/* 0x82 = SOUND 1 when OUT */
+/* 0x82 = JOY 1 when IN */
+/* 0x83 = SOUND 2 when OUT */
+/* 0x83 = JOY 2 when IN */
 
 __sfr __at 0x80 PORTX80;
 __sfr __at 0x81 PORTX81;
 __sfr __at 0x82 PORTX82;
-__sfr __at 0x82 PORTX83;
+__sfr __at 0x83 PORTX83;
 
 
 
@@ -115,6 +122,7 @@ void setVDPRAM(unsigned int addr, unsigned char dat) {
     PORTX81 = (unsigned char)addr_2;
     PORTX80 = dat;
 }
+
 
 unsigned char getVDPRAM(unsigned int addr) {
     static unsigned int addr_2;
@@ -270,25 +278,17 @@ void setPatterns() {
 
    SETPATTERN('o',"0000000000000001");  //          .
 
-
    SETPATTERN('p',"0000000000000080");  //         .
 
-
    SETPATTERN('q',"0100000000000000");  //          '
-
    
    SETPATTERN('r',"8000000000000000");  //         '
 
-/*
    SETPATTERN('A',"788484FC84848400");
    SETPATTERN('B',"F88484F88484F800");
-*/
    SETPATTERN('C',"7884808080847800");
-/*
    SETPATTERN('D',"F88484848484F800");
-*/
    SETPATTERN('E',"FC8080F88080FC00");
-/*
    SETPATTERN('F',"FC8080F880808000");
    SETPATTERN('G',"788080BC84847800");
    SETPATTERN('H',"848484FC84848400");
@@ -298,15 +298,11 @@ void setPatterns() {
    SETPATTERN('L',"808080808080FC00");
    SETPATTERN('M',"84CCB4B484848400");
    SETPATTERN('N',"84C4A4A4948C8400");
-*/
    SETPATTERN('O',"7884848484847800");
-/*
    SETPATTERN('P',"F88484F880808000");
    SETPATTERN('Q',"78848484948C7C00");
-*/
    SETPATTERN('R',"F88488F088888400");
    SETPATTERN('S',"7C8080780404F800");
-/*
    SETPATTERN('T',"FC30303030303000");
    SETPATTERN('U',"8484848484847800");
    SETPATTERN('V',"8484844848483000");
@@ -314,7 +310,6 @@ void setPatterns() {
    SETPATTERN('X',"8484483048848400");
    SETPATTERN('Y',"8448483030303000");
    SETPATTERN('Z',"FC0810102040FC00");
-   */
    SETPATTERN('0',"788C94B4A4C47800");
    SETPATTERN('1',"307030303030FC00");
    SETPATTERN('2',"788484186080FC00");
@@ -328,15 +323,6 @@ void setPatterns() {
    SETPATTERN(':',"0030300000303000");
    SETPATTERN('-',"0000007E00000000");
 }
-
-void audioSilence() {
-    for(unsigned int i=LEFT_POS;i<=RIGHT_POS;i++) {
-        for(unsigned int j=255;j>247;j=j-2) {
-            soundOut(i,j);
-        }
-    }
-}
-
 
 
 void setGraphicsMode() {
@@ -427,7 +413,6 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
   }
   horiz = x ;
 
-  
   setVDPRAM(addr, vert);
   setVDPRAM(addr+1, (unsigned char)horiz);
   setVDPRAM(addr+2, patternNumber<<2);
@@ -437,7 +422,7 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
 
 
 void clearTRSScreen() {
-  for(int i=0;i<48;i++)
+  for(int i=0;i<16;i++)
     printf("\n");
 }
 
@@ -446,15 +431,15 @@ void drawMaze() {
   unsigned char j;
   unsigned char k;
 
-
   for(j=0;j<32;j++)
-     setCharacterGroupColor(j, DARKBLUE, BLACK);
+     setCharacterGroupColor(j, DARKBLUE, BLACK);  // set all characters to blue on black
   for(j=8;j<=11;j++)
-     setCharacterGroupColor(j, DARKRED, BLACK);
+     setCharacterGroupColor(j, DARKRED, BLACK);   // set chars 64 - 95 to red on black 
   for(j=6;j<=7;j++)
-     setCharacterGroupColor(j, WHITE, BLACK);
+     setCharacterGroupColor(j, WHITE, BLACK);     // set chars 48 - 63 to white on black
 
 
+  // clear screen
   for(k=0;k<24;k++)
       for(j=0;j<32;j++)
           setCharacterAt(j,k,' ');
@@ -587,119 +572,273 @@ void drawMaze() {
 }
 
 
-void movePacman() {
-  unsigned char c;
-  int x = sprAttr[PACMAN_SPRITENUM].x;
-  int y = sprAttr[PACMAN_SPRITENUM].y;
 
-    sprAttr[PACMAN_SPRITENUM].x = x + sprAttr[PACMAN_SPRITENUM].xdir;
-    sprAttr[PACMAN_SPRITENUM].y = y + sprAttr[PACMAN_SPRITENUM].ydir;
-    if(x < -16)
-      sprAttr[PACMAN_SPRITENUM].x = -16;
-    if(x > 255)
-      sprAttr[PACMAN_SPRITENUM].x = 255;
+unsigned char canGoNorth(unsigned char spriteNum) {
+    int x = sprAttr[spriteNum].x;
+    int y = sprAttr[spriteNum].y;
+    
+
+    if(x == 8 && y > 16 )
+      return TRUE;
+
+    if(x == 32 && y > 16)
+      return TRUE;
+
+    if(x == 56 && y < 150)
+      return TRUE;
+
+    if(x == 184 && y < 150)
+      return TRUE;
+
+    if(x == 208 && y > 16 )
+      return TRUE;
+
+    if(x == 232 && y > 16)
+      return TRUE;
+
+    if(x == 120 && y >= 38 && y <= 62)
+      return TRUE;
+
+    if(x == 80 && y >= 62 && y <= 102)
+      return TRUE;
+
+    if(x == 160 && y >= 62 && y <= 102)
+      return TRUE;
+
+    if(x == 96 && y >= 102 && y <= 126)
+      return TRUE;
+
+    if(x == 144 && y >= 102 && y <= 126)
+      return TRUE;
+
+    if(x == 120 && y >= 128 && y <= 150)
+      return TRUE;
+
+    if(y <= 16)
+      return FALSE;
+
+    return FALSE;
+}
+
+unsigned char canGoEast(unsigned char spriteNum) {
+    int x = sprAttr[spriteNum].x;
+    int y = sprAttr[spriteNum].y;
+
+    if(x <= 230)
+      return TRUE;
+
+    return FALSE;
+}
+
+unsigned char canGoWest(unsigned char spriteNum) {
+    int x = sprAttr[spriteNum].x;
+    int y = sprAttr[spriteNum].y;
+
+    if(x >= 10)
+        return TRUE;
+
+    return FALSE;
+}
+
+unsigned char canGoSouth(unsigned char spriteNum) {
+    int x = sprAttr[spriteNum].x;
+    int y = sprAttr[spriteNum].y;
+
+
+    if(x == 8 && y <= 172)
+      return TRUE;
+
+    if(x == 32 && y <= 172)
+      return TRUE;
+
+    if(x == 56 && y <= 150)
+      return TRUE;
+
+    if(x == 184 && y <= 150)
+      return TRUE;
+
+    if(x == 208 && y <= 172)
+      return TRUE;
+
+    if(x == 232 && y <= 172)
+      return TRUE;
+
+    if(x == 120 && y >= 38 && y <= 62)
+      return TRUE;
+
+    if(x == 80 && y >= 62 && y <= 102)
+      return TRUE;
+
+    if(x == 160 && y >= 62 && y <= 102)
+      return TRUE;
+
+    if(x == 96 && y >= 102 && y <= 126)
+      return TRUE;
+
+    if(x == 144 && y >= 102 && y <= 126)
+      return TRUE;
+
+    if(x == 120 && y >= 128 && y <= 150)
+      return TRUE;
+
+    if(y > 172)
+      return FALSE;
+
+    return FALSE;
+}
+
+
+void movePacman() {
+    unsigned char c;
+    int x = sprAttr[PACMAN_SPRITENUM].x;
+    int y = sprAttr[PACMAN_SPRITENUM].y;
+    int xd = sprAttr[PACMAN_SPRITENUM].xdir;
+    int yd = sprAttr[PACMAN_SPRITENUM].ydir;
+
+    if((xd < 0 && canGoWest(PACMAN_SPRITENUM)) || (xd > 0 && canGoEast(PACMAN_SPRITENUM)))
+        sprAttr[PACMAN_SPRITENUM].x = x + xd;
+    if((yd < 0 && canGoNorth(PACMAN_SPRITENUM)) || (yd > 0 && canGoSouth(PACMAN_SPRITENUM)))
+        sprAttr[PACMAN_SPRITENUM].y = y + yd;
+
+    if(x < -8)
+        sprAttr[PACMAN_SPRITENUM].x = -8;
+    if(x > 248)
+        sprAttr[PACMAN_SPRITENUM].x = 248;
 
     if(y < 16)
-      sprAttr[PACMAN_SPRITENUM].y = 16;
-    if(y > 175)
-      sprAttr[PACMAN_SPRITENUM].y = 176;
- 
+        sprAttr[PACMAN_SPRITENUM].y = 16;
+    if(y > 174)
+        sprAttr[PACMAN_SPRITENUM].y = 174;
+   
     anPos = anPos + anDir;
     if(anPos > 1 || anPos < 1) 
       anDir = -anDir;
    
-    setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos);
-}
-
-unsigned char canGoLeftOrRight(unsigned char spritenum) {
-    int x = sprAttr[spritenum].x;
-    int y = sprAttr[spritenum].y;
-    if(y == 16 && x >= 8 && x <= 232)
-      return TRUE;
-    if(y == 40 && x <= 184 && x >= 56)
-      return TRUE;
-    if(y == 64 && x >= 80 && x <= 160)
-      return TRUE;
-    if(y == 88) {
-      if(x >= 0 && x <= 32)
-        return TRUE;
-      if(x >= 56 && x <= 80)
-        return TRUE;
-      if(x >= 160 && x <= 184)
-        return TRUE;
-      if(x >= 208 && x <= 240)
-        return TRUE;
-    }
-    if(y == 104 && x >= 80 && x <= 160)
-      return TRUE;
-    if(y == 128 && x >= 56 && x <= 184)
-      return TRUE;
-    if(y == 152 && x >= 32 && x <= 208)
-      return TRUE;
-    if(y == 176 && x >= 8 && x <= 232)
-      return TRUE;
-
-    return FALSE;
+    if(yd < 0)
+        setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + NORTH_PACMAN_PAT_OFFSET);
+    else 
+        if(yd > 0)
+            setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + SOUTH_PACMAN_PAT_OFFSET);
+        else
+            if(xd < 0)
+                setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + WEST_PACMAN_PAT_OFFSET);
+            else
+                setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + EAST_PACMAN_PAT_OFFSET);
 }
 
 
-unsigned char canGoUpOrDown(unsigned char spritenum) {
-    int x = sprAttr[spritenum].x;
-    int y = sprAttr[spritenum].y;
-
-    if(x == 8 && y >= 16 && y <= 176)
-      return TRUE;
-    if(x == 32 && y >= 16 && y <= 176)
-      return TRUE;
-    if(x == 56 && y >= 16 && y <= 152)
-      return TRUE;
-    if(x == 80 && y >= 64 && y <= 104)
-      return TRUE;
-    if(x == 96 && y >= 104 && y <= 128)
-      return TRUE;
-    if(x == 120) {
-      if(y >= 40 && y <= 72)
-         return TRUE;
-      if(y >= 128 && y <= 152)
-         return TRUE;
-    }
-    if(x == 144 && y >= 104 && y <= 128)
-      return TRUE;
-    if(x == 184 && y >= 16 && y <= 152)
-      return TRUE;
-    if(x == 208 && y >= 16 && y <= 176)
-      return TRUE;
-    if(x == 232 && y >= 16 && y <= 176)
-      return TRUE;
-
-    return FALSE;
-}
-
-
+#define J_N 239
+#define J_NE 111
+#define J_E 127
+#define J_SE 95
+#define J_S 223
+#define J_SW 159
+#define J_W 191
+#define J_NW 175
+#define J_BUTTON 247
 void checkControls() {
         unsigned char k = getJoystick(LEFT_POS);
-        if(k == 191 && canGoLeftOrRight(PACMAN_SPRITENUM)) {
+        if(k == J_E && canGoEast(PACMAN_SPRITENUM)) {
           sprAttr[PACMAN_SPRITENUM].xdir=2;
           sprAttr[PACMAN_SPRITENUM].ydir=0;
         }
         else
-        if(k == 127 && canGoUpOrDown(PACMAN_SPRITENUM)) {
+        if(k == J_N && canGoNorth(PACMAN_SPRITENUM)) {
           sprAttr[PACMAN_SPRITENUM].ydir=-2;
           sprAttr[PACMAN_SPRITENUM].xdir=0;
         }
         else
-        if(k == 223 && canGoLeftOrRight(PACMAN_SPRITENUM)) {
+        if(k == J_W && canGoWest(PACMAN_SPRITENUM)) {
           sprAttr[PACMAN_SPRITENUM].xdir=-2;
           sprAttr[PACMAN_SPRITENUM].ydir=0;
         }
         else
-        if(k == 239 && canGoUpOrDown(PACMAN_SPRITENUM)) {
+        if(k == J_S && canGoSouth(PACMAN_SPRITENUM)) {
           sprAttr[PACMAN_SPRITENUM].ydir=2;
           sprAttr[PACMAN_SPRITENUM].xdir=0;
         }
         else
-        if(k == 247)
+        if(k == J_BUTTON)
               bRunning = FALSE;
+}
+
+
+void wait(unsigned int x) {
+    for(unsigned int y = 0; y<x;y++) {
+      #pragma asm
+      nop
+      #pragma endasm
+    }
+}
+
+
+void audioSilence() {
+  soundOut(LEFT_POS,255); soundOut(RIGHT_POS,255);
+  soundOut(LEFT_POS,253); soundOut(RIGHT_POS,253);
+  soundOut(LEFT_POS,251); soundOut(RIGHT_POS,251);
+  soundOut(LEFT_POS,249); soundOut(RIGHT_POS,249);
+}
+
+
+void volumeup() {
+  soundOut(LEFT_POS,9);  soundOut(RIGHT_POS,9);
+  //soundOut(LEFT_POS,11); soundOut(RIGHT_POS,11);
+  //soundOut(LEFT_POS,13); soundOut(RIGHT_POS,13);
+  //soundOut(LEFT_POS,15); soundOut(RIGHT_POS,15);
+}
+
+
+#define EIGHTHNOTE 1000
+#define playLeft(NOTE) PORTX82 = notes[NOTE].b1; PORTX82 = notes[NOTE].b2;
+#define playRight(NOTE) PORTX83 = notes[NOTE].b1; PORTX83 = notes[NOTE].b2;
+void introMusic() {
+  volumeup();
+
+  playLeft(C0);                    playRight( C2);                  wait(EIGHTHNOTE);
+                                   playRight( C3);                  wait(EIGHTHNOTE);
+  playLeft(C1);                    playRight( G2);                  wait(EIGHTHNOTE);
+                                   playRight( E2);                  wait(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C3);                  wait(EIGHTHNOTE);
+                                   playRight( G2);                  wait(EIGHTHNOTE);
+  playLeft(C1);                    playRight( E2);                  wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+
+  playLeft(CS0);                   playRight( CS2);                 wait(EIGHTHNOTE);
+                                   playRight( CS3);                 wait(EIGHTHNOTE);
+  playLeft(CS1);                   playRight( GS2);                 wait(EIGHTHNOTE);
+                                   playRight( F2);                  wait(EIGHTHNOTE);
+  playLeft(CS0);                   playRight( CS3);                 wait(EIGHTHNOTE);
+                                   playRight( GS2);                 wait(EIGHTHNOTE);
+  playLeft(CS1);                   playRight( F2);                  wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+
+  playLeft(C0);                    playRight( C2);                  wait(EIGHTHNOTE);
+                                   playRight( C3);                  wait(EIGHTHNOTE);
+  playLeft(C1);                    playRight( G2);                  wait(EIGHTHNOTE);
+                                   playRight( E2);                  wait(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C3);                  wait(EIGHTHNOTE);
+                                   playRight( G2);                  wait(EIGHTHNOTE);
+  playLeft(C1);                    playRight( E2);                  wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+
+  playLeft(G0);                    playRight( F2);                  wait(EIGHTHNOTE);
+                                   playRight( FS2);                 wait(EIGHTHNOTE);
+                                   playRight( G2);                  wait(EIGHTHNOTE/2);
+                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
+  playLeft(A1);                    playRight( G2);                  wait(EIGHTHNOTE);
+                                   playRight( GS2);                 wait(EIGHTHNOTE);
+                                   playRight( A3);                  wait(EIGHTHNOTE/2);
+                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
+  playLeft(B1);                    playRight( A3);                  wait(EIGHTHNOTE);
+                                   playRight( AS3);                 wait(EIGHTHNOTE);
+                                   playRight( B3);                  wait(EIGHTHNOTE/2);
+                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
+  playLeft(C1);                    playRight( C3);                  wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+                                                                    wait(EIGHTHNOTE);
+
+  audioSilence();
 }
 
 
@@ -711,18 +850,28 @@ int main()
 
    char buf[33];
 
+   bRunning = TRUE;
+
    clearTRSScreen();
 
-   printf("AUDIO OFF\n");
+   printf(".---------------------------------------.\n");
+   printf("(                PACMAN!!               )\n");
+   printf("(           YYYY-MM-DD-HH-MM-SS         )\n");
+   printf("(              CKSUM               )\n");
+   printf("'---------------------------------------'\n\n");
+   printf("THIS PROGRAM REQUIRES THE TRS-80 GRAPHICS ");
+   printf("AND SOUND CARD V2.0.\n\n");
+
+   printf("AUDIO OFF... ");
    audioSilence();
 
-   printf("SETUP AUDIO\n");
+   printf("SETUP AUDIO...\n");
    initNoteData();
 
-   printf("SEEDING RNG\n");
+   printf("SEEDING RANDOM NUMBER GENERATOR... ");
    srand(getRRegister());
 
-   printf("GRAPHICS MODE SETUP\n");
+   printf("GRAPHICS MODE SETUP...\n");
 
    g.graphicsMode = GRAPHICSMODE1;
    g.externalVideoEnabled = FALSE;
@@ -733,25 +882,61 @@ int main()
    g.backgroundColor = BLACK;
    setGraphicsMode();
 
-   printf("SETUP TEXT PATS\n");
-   setPatterns();
-
-   printf("SETUP MAZE\n");
-   drawMaze();
-
-   printf("INIT SPRITE PATS\n");
-   setSpritePattern(0,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFFFF00FFFFFFFFFEFCF8F0");  // PACMAN, mouth closed (right)
-   setSpritePattern(1,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEFFFEE000E0FEFFFFFEFCF8F0");  // PACMAN, mouth open 1 (right)
-   setSpritePattern(2,"0F1F3F7FFFFFFFFFFFFFFFFF7F3F1F0FF0F8FCBEF8E0800080C0E0F8FEFCF8F0");  // PACMAN, mouth open 2 (right)
-
+   printf("HIDE PACMAN IF ON SCREEN... ");
    sprAttr[PACMAN_SPRITENUM].x = 8;
    sprAttr[PACMAN_SPRITENUM].y = 16;
+   sprAttr[PACMAN_SPRITENUM].color = BLACK;
+   setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos);
+
+
+   printf("SETUP TEXT PATTERNS...\n");
+   setPatterns();
+
+   printf("SETUP MAZE... ");
+   drawMaze();
+
+   printf("INIT SPRITE PATTERNS...\n");
+
+   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFEFFFF80FFFFFFFEFEFCF8E0   <- closed mouth east face
+   //061E3E7E7EEEFEFFFFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth north face
+   //071F3F7B7FFFFF01FFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth west face
+   //071F3F7B7FFFFF01FFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth south face
+
+   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFFFCE080E0FCFFFEFEFCF8E0   <- open mouth east (1)
+   //08183C7C7CEEFEFFFFFFFF7F7F3F1F0720387C7E7EFFFFFFFFFFFFFEFEFCF8E0   <- open mouth north (1)
+   //071F3F7BFF3F0701073FFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- open mouth west (1)
+   //071F3F7F7FFFFFFFFFFEEE7C7C3C1808E0F8FCFEFEFFFFFFFFFFFF7E7E7C3820   <- open mouth south (1)
+
+   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEF8E080000080E0F8FEFCF8E0   <- open mouth east (2)
+   //0010307878ECFCFEFFFFFF7F7F3F1F0700080C1E1E3F3F7FFFFFFFFEFEFCF8E0   <- open mouth north (2)
+   //071F3F7B1F0701000001071F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- open mouth west (2)
+   //071F3F7F7FFFFFFFFEFCEC7878301000E0F8FCFEFEFFFFFF7F3F3F1E1E0C0800   <- open mouth south (2)
+
+   setSpritePattern(0, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFEFFFF80FFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (east)
+   setSpritePattern(1, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFFFCE080E0FCFFFEFEFCF8E0"); // PACMAN, mouth open 1 (east)
+   setSpritePattern(2, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEF8E080000080E0F8FEFCF8E0"); // PACMAN, mouth open 2 (east)
+   
+   setSpritePattern(3, "061E3E7E7EEEFEFFFFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (north)
+   setSpritePattern(4, "08183C7C7CEEFEFFFFFFFF7F7F3F1F0720387C7E7EFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth open 1 (north)
+   setSpritePattern(5, "0010307878ECFCFEFFFFFF7F7F3F1F0700080C1E1E3F3F7FFFFFFFFEFEFCF8E0"); // PACMAN, mouth open 2 (north)
+   
+   setSpritePattern(6, "071F3F7B7FFFFF01FFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (west)
+   setSpritePattern(7, "071F3F7BFF3F0701073FFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth open 1 (west)
+   setSpritePattern(8, "071F3F7B1F0701000001071F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth open 2 (west)
+   
+   setSpritePattern(9, "071F3F7F7FFFFFFFFFFEEE7E7E3E1E06E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (south)
+   setSpritePattern(10,"071F3F7F7FFFFFFFFFFEEE7C7C3C1808E0F8FCFEFEFFFFFFFFFFFF7E7E7C3820"); // PACMAN, mouth open 1 (south)
+   setSpritePattern(11,"071F3F7F7FFFFFFFFEFCEC7878301000E0F8FCFEFEFFFFFF7F3F3F1E1E0C0800"); // PACMAN, mouth open 2 (south)
+   
+   setSpritePattern(12,"070F0F1D193A383F3F3F3F3F3F3F1D08F0F8F8DCCCAE8EFEFEFEFEFEFEFEDC88"); // GHOST (1)
+   setSpritePattern(13,"0F1F1F3F3375717F7F7F7F7F7F7F6E24E0F0F0F8985C1CFCFCFCFCFCFCFCEC48"); // GHOST (2)
+   
    sprAttr[PACMAN_SPRITENUM].color = DARKYELLOW;
 
+   printf("PLAY INTRO MUSIC... ");
+   introMusic();
 
-   printf("ANIMATE SPRITE\n");
- 
-   
+   printf("ANIMATE SPRITES...\n");  
    while(bRunning == TRUE) {
         checkControls();
         movePacman();
