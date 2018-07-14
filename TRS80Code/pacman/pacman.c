@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include "notedata.c"
 
+
+// port addresses
 #define LEFT_POS 0x82
 #define RIGHT_POS 0x83
 
+// colors
 #define TRANSPARENT 0
 #define BLACK 1
 #define MEDIUMGREEN 2
@@ -22,33 +25,53 @@
 #define GRAY 14
 #define WHITE 15
 
+// joystick positions
+#define J_N 239
+#define J_NE 111
+#define J_E 127
+#define J_SE 95
+#define J_S 223
+#define J_SW 159
+#define J_W 191
+#define J_NW 175
+#define J_BUTTON 247
+
+
+// pattern setting function macro
 #define SETPATTERN(XXX,YYY) strcpy(buf,YYY); setCharPattern(XXX,buf);
 
+
+// sprite identifiers
 #define PACMAN_SPRITENUM 0
+#define RED_GHOST_SPRITENUM 1
+#define CYAN_GHOST_SPRITENUM 2
+#define PINK_GHOST_SPRITENUM 3
+#define BROWN_GHOST_SPRITENUM 4
 
 #define EAST_PACMAN_PAT_OFFSET 0
 #define NORTH_PACMAN_PAT_OFFSET 3 
 #define WEST_PACMAN_PAT_OFFSET 6
 #define SOUTH_PACMAN_PAT_OFFSET 9
 
+
 /* 0x82 = SOUND 1 when OUT */
 /* 0x82 = JOY 1 when IN */
 /* 0x83 = SOUND 2 when OUT */
 /* 0x83 = JOY 2 when IN */
-
 __sfr __at 0x80 PORTX80;
 __sfr __at 0x81 PORTX81;
 __sfr __at 0x82 PORTX82;
 __sfr __at 0x83 PORTX83;
 
 
-
-// graphicsSetup
+// graphicsSetup constants
 #define GRAPHICSMODE1 0
 #define GRAPHICSMODE2 1
 #define MULTICOLORMODE 2
 #define TEXTMODE 3
 
+
+// booleans
 #define TRUE 1
 #define FALSE 0
 
@@ -68,6 +91,7 @@ typedef struct {
     unsigned int SpritePatternTableAddr;
 } graphicsSetup;
 
+
 typedef struct {
   int x;
   int y;
@@ -77,13 +101,11 @@ typedef struct {
 } spriteAttr;
 
 
-
-unsigned char bRunning = TRUE;
-unsigned int anPos = 0;
-int anDir = 1;
-graphicsSetup g;
-spriteAttr sprAttr[32];
-
+unsigned char bRunning = TRUE;  // main game loop control
+unsigned int anPos = 0;         // animation position
+int anDir = 1;                  // 1, -1 counter direction
+graphicsSetup g;                // graphics mode struct
+spriteAttr sprAttr[32];         // sprite struct array
 
 
 /* *************************************************************
@@ -98,15 +120,20 @@ unsigned char getRRegister() {
     #pragma endasm
 }
 
-
-
+/* *************************************************************
+   | VDP register set (low level register change)              |
+   *************************************************************
+*/
 void setVDPRegister(unsigned char reg,unsigned char dat) {
     PORTX81 = dat;
     reg=reg+128;
     PORTX81 = reg;
 }
 
-
+/* *************************************************************
+   | Set byte in VDP RAM                                       |
+   *************************************************************
+*/
 void setVDPRAM(unsigned int addr, unsigned char dat) {
     static unsigned int addr_2;
     static unsigned int addr_1;
@@ -123,7 +150,10 @@ void setVDPRAM(unsigned int addr, unsigned char dat) {
     PORTX80 = dat;
 }
 
-
+/* *************************************************************
+   | Pull byte from VDP RAM                                    |
+   *************************************************************
+*/
 unsigned char getVDPRAM(unsigned int addr) {
     static unsigned int addr_2;
     static unsigned int addr_1;
@@ -136,7 +166,10 @@ unsigned char getVDPRAM(unsigned int addr) {
     return PORTX80;
 }
 
-
+/* *************************************************************
+   | Set sound byte to left or right sound chip                |
+   *************************************************************
+*/
 void soundOut(unsigned char LeftOrRight, unsigned char dat) {
     if(LeftOrRight == LEFT_POS) 
         PORTX82 = dat;
@@ -144,7 +177,10 @@ void soundOut(unsigned char LeftOrRight, unsigned char dat) {
         PORTX83 = dat; 
 }
 
-
+/* *************************************************************
+   | get left or right joystick position                       |
+   *************************************************************
+*/
 unsigned char getJoystick(unsigned char LeftOrRight) {
     if(LeftOrRight == LEFT_POS)
         return PORTX83;
@@ -152,9 +188,13 @@ unsigned char getJoystick(unsigned char LeftOrRight) {
         return PORTX82;
 }
 
-
+/* *************************************************************
+   | Put character on screen at position                       |
+   *************************************************************
+*/
 void setCharacterAt(unsigned char x, unsigned char y, unsigned char c) {
-    unsigned int addr = g.NameTableAddr;
+    static unsigned int addr;
+    addr = g.NameTableAddr;
 
     if(g.graphicsMode == TEXTMODE)
       addr = addr + (y*40) + x;
@@ -165,8 +205,13 @@ void setCharacterAt(unsigned char x, unsigned char y, unsigned char c) {
 }
 
 
+/* *************************************************************
+   | Retrieve character at position                            |
+   *************************************************************
+*/
 unsigned char getCharAt(unsigned char x, unsigned char y) {
-    unsigned int addr = g.NameTableAddr;
+    static unsigned int addr;
+    addr = g.NameTableAddr;
 
     if(g.graphicsMode == TEXTMODE)
       addr = addr + (y*40) + x;
@@ -176,11 +221,15 @@ unsigned char getCharAt(unsigned char x, unsigned char y) {
     return getVDPRAM(addr);
 }
 
-
+/* *************************************************************
+   | Write a string at screen position                         |
+   *************************************************************
+*/
 void setCharactersAt(unsigned char x, unsigned char y, char* s) {
-    unsigned int addr = g.NameTableAddr;
-    unsigned char c;
+    static unsigned int addr;
+    static unsigned char c;
 
+    addr = g.NameTableAddr;
     if(g.graphicsMode == TEXTMODE)
       addr = addr + (y*40) + x;
     else
@@ -199,15 +248,19 @@ void setScreenColor(unsigned char textForegroundColor, unsigned char backgroundC
 
 
 void setCharPattern(unsigned char pos, char* patt) {
-    char duple[3];
-    unsigned char d;
-    unsigned int addr = pos*8 + g.PatternTableAddr;
-    
+    static char duple[3];
+    static unsigned char d;
+    static unsigned char e;
+    static unsigned char f;
+    static unsigned int addr;
+
+    addr = (pos<<3) + g.PatternTableAddr;
     duple[2]=0x0;
     d = 0;
-    for(unsigned char x=0;x<strlen(patt);x=x+2) {
-        duple[0] = *(patt+x);
-        duple[1] = *(patt+x+1);
+    e = strlen(patt);
+    for(f=0;f<e;f=f+2) {
+        duple[0] = *(patt+f);
+        duple[1] = *(patt+f+1);
         setVDPRAM(addr+d,(unsigned char) strtol(duple, NULL, 16));
         d++;
     }
@@ -215,7 +268,7 @@ void setCharPattern(unsigned char pos, char* patt) {
 
 
 unsigned char setCharacterGroupColor(unsigned char colorGroup, unsigned char foreground, unsigned char background) {
-    unsigned char c;
+    static unsigned char c;
 
     if(colorGroup > 31 || foreground > WHITE || background > WHITE)
         return 0; 
@@ -377,19 +430,23 @@ void setGraphicsMode() {
 
 
 void setSpritePattern(unsigned char spriteNumber, char* patt) {
-  char duple[3];
-  unsigned char d;
-  unsigned char x;
-  unsigned int addr = g.SpritePatternTableAddr;
+  static char duple[3];
+  static unsigned char d;
+  static unsigned char x;
+  static unsigned int addr;
+  static unsigned char slen;
   duple[2] = 0x0;
 
+
+  addr = g.SpritePatternTableAddr;
   if(g.sprites16x16Enabled == TRUE) 
       addr = addr + (spriteNumber << 5);
   else
       addr = addr + (spriteNumber << 3);
   
   d=0;
-  for(x=0;x<strlen(patt);x=x+2) {
+  slen = strlen(patt);
+  for(x=0;x<slen;x=x+2) {
         duple[0] = *(patt+x);
         duple[1] = *(patt+x+1);
         setVDPRAM(addr+d,(unsigned char)strtol(duple, NULL, 16));
@@ -398,11 +455,19 @@ void setSpritePattern(unsigned char spriteNumber, char* patt) {
 }
 
 
- void setSpriteAttribute(unsigned char spriteNum, int x, unsigned int y, unsigned char color, unsigned char patternNumber) {
-  unsigned int addr = g.SpriteAttrTableAddr + (spriteNum << 2);
-  unsigned char vert;
-  int horiz;
-  unsigned char b5;
+ void setSpriteAttribute(unsigned char spriteNum, unsigned char patternNumber) {
+  static unsigned int addr;
+  static unsigned char vert;
+  static int horiz;
+  static unsigned char b5;
+  static int x;
+  static unsigned int y;
+  static unsigned char color;
+
+  x = sprAttr[spriteNum].x;
+  y = sprAttr[spriteNum].y;
+  color = sprAttr[spriteNum].color;
+  addr = g.SpriteAttrTableAddr + (spriteNum << 2);
 
   b5 = color;
   vert = y ;
@@ -428,8 +493,8 @@ void clearTRSScreen() {
 
 
 void drawMaze() {
-  unsigned char j;
-  unsigned char k;
+  static unsigned char j;
+  static unsigned char k;
 
   for(j=0;j<32;j++)
      setCharacterGroupColor(j, DARKBLUE, BLACK);  // set all characters to blue on black
@@ -572,47 +637,72 @@ void drawMaze() {
 }
 
 
+unsigned char canGoSouth(unsigned char spriteNum) {
+    static int x;
+    static int y;
+
+    x = sprAttr[spriteNum].x + sprAttr[spriteNum].xdir;
+    y = sprAttr[spriteNum].y + sprAttr[spriteNum].ydir;
+
+    if(y <= 174) 
+      if(x == 8 || x == 32 || x == 208 || x == 232)
+        return TRUE;
+
+    if(y <= 150) 
+      if(x == 56 || x == 184)
+        return TRUE;
+
+    if(x == 120) {
+      if(y >= 40 && y <= 64)
+        return TRUE;
+      if(y >= 128 && y <= 150)
+        return TRUE;
+    }
+
+    if(y >= 64 && y <= 104)
+      if(x == 80 || x == 160)
+        return TRUE;
+
+    if(y >= 104 && y <= 128) 
+      if(x == 96 || x == 144)
+        return TRUE;
+
+    if(y >= 174)
+      return FALSE;
+
+    return FALSE;
+}
+
 
 unsigned char canGoNorth(unsigned char spriteNum) {
-    int x = sprAttr[spriteNum].x;
-    int y = sprAttr[spriteNum].y;
-    
+    static int x;
+    static int y;
 
-    if(x == 8 && y > 16 )
-      return TRUE;
+    x = sprAttr[spriteNum].x + sprAttr[spriteNum].xdir;
+    y = sprAttr[spriteNum].y + sprAttr[spriteNum].ydir;
 
-    if(x == 32 && y > 16)
-      return TRUE;
+    if(y >= 16) 
+      if(x == 8 || x == 32 || x == 208 || x == 232)
+        return TRUE;
 
-    if(x == 56 && y < 150)
-      return TRUE;
+    if(y <= 150) 
+      if(x == 56 || x == 184)
+        return TRUE;
 
-    if(x == 184 && y < 150)
-      return TRUE;
+    if(x == 120) {
+      if(y >= 40 && y <= 64)
+        return TRUE;
+      if(y >= 128 && y <= 150)
+        return TRUE;
+    }
 
-    if(x == 208 && y > 16 )
-      return TRUE;
+    if(y >= 64 && y <= 104) 
+      if(x == 80 || x == 160)
+        return TRUE;
 
-    if(x == 232 && y > 16)
-      return TRUE;
-
-    if(x == 120 && y >= 38 && y <= 62)
-      return TRUE;
-
-    if(x == 80 && y >= 62 && y <= 102)
-      return TRUE;
-
-    if(x == 160 && y >= 62 && y <= 102)
-      return TRUE;
-
-    if(x == 96 && y >= 102 && y <= 126)
-      return TRUE;
-
-    if(x == 144 && y >= 102 && y <= 126)
-      return TRUE;
-
-    if(x == 120 && y >= 128 && y <= 150)
-      return TRUE;
+    if(y >= 104 && y <= 128) 
+      if(x == 96 || x == 144)
+        return TRUE;
 
     if(y <= 16)
       return FALSE;
@@ -620,80 +710,88 @@ unsigned char canGoNorth(unsigned char spriteNum) {
     return FALSE;
 }
 
+
 unsigned char canGoEast(unsigned char spriteNum) {
-    int x = sprAttr[spriteNum].x;
-    int y = sprAttr[spriteNum].y;
+    static int x;
+    static int y;
 
-    if(x <= 230)
-      return TRUE;
+    x = sprAttr[spriteNum].x + sprAttr[spriteNum].xdir;
+    y = sprAttr[spriteNum].y + sprAttr[spriteNum].ydir;
 
-    return FALSE;
-}
+    if(x >= 248)
+      return FALSE;
 
-unsigned char canGoWest(unsigned char spriteNum) {
-    int x = sprAttr[spriteNum].x;
-    int y = sprAttr[spriteNum].y;
+    if(y == 16 || y == 172) 
+      if(x >= 8 && x <= 232)
+        return TRUE;
+    
+    if(y == 40 || y == 128) 
+      if(x >= 56 && x <= 184)
+        return TRUE;    
 
-    if(x >= 10)
+    if(y == 64 || y == 104) 
+      if(x >= 80 && x <= 160)
+        return TRUE;
+
+    if(y == 150) 
+      if(x >= 32 && x <= 208)
+        return TRUE;
+
+    if(y == 88)
+      if(x <= 32 && x >= 208)
         return TRUE;
 
     return FALSE;
 }
 
-unsigned char canGoSouth(unsigned char spriteNum) {
-    int x = sprAttr[spriteNum].x;
-    int y = sprAttr[spriteNum].y;
 
+unsigned char canGoWest(unsigned char spriteNum) {
+    static int x;
+    static int y;
 
-    if(x == 8 && y <= 172)
-      return TRUE;
+    x = sprAttr[spriteNum].x + sprAttr[spriteNum].xdir;
+    y = sprAttr[spriteNum].y + sprAttr[spriteNum].ydir;
 
-    if(x == 32 && y <= 172)
-      return TRUE;
-
-    if(x == 56 && y <= 150)
-      return TRUE;
-
-    if(x == 184 && y <= 150)
-      return TRUE;
-
-    if(x == 208 && y <= 172)
-      return TRUE;
-
-    if(x == 232 && y <= 172)
-      return TRUE;
-
-    if(x == 120 && y >= 38 && y <= 62)
-      return TRUE;
-
-    if(x == 80 && y >= 62 && y <= 102)
-      return TRUE;
-
-    if(x == 160 && y >= 62 && y <= 102)
-      return TRUE;
-
-    if(x == 96 && y >= 102 && y <= 126)
-      return TRUE;
-
-    if(x == 144 && y >= 102 && y <= 126)
-      return TRUE;
-
-    if(x == 120 && y >= 128 && y <= 150)
-      return TRUE;
-
-    if(y > 172)
+    if(x <= -8)
       return FALSE;
+
+    if(y == 16 || y == 172) 
+      if(x >= 8 && x <= 232)
+        return TRUE;
+    
+    if(y == 40 || y == 128) 
+      if(x >= 56 && x <= 184)
+        return TRUE;
+
+    if(y == 64 || y == 104) 
+      if(x >= 80 && x <= 160)
+        return TRUE;    
+
+    if(y == 150) 
+      if(x >= 32 && x <= 208)
+        return TRUE;
+
+    if(y == 88)
+      if(x <= 32 && x >= 208)
+        return TRUE;
 
     return FALSE;
 }
 
 
+
+
 void movePacman() {
-    unsigned char c;
-    int x = sprAttr[PACMAN_SPRITENUM].x;
-    int y = sprAttr[PACMAN_SPRITENUM].y;
-    int xd = sprAttr[PACMAN_SPRITENUM].xdir;
-    int yd = sprAttr[PACMAN_SPRITENUM].ydir;
+    static unsigned char c;
+    static int x;
+    static int y;
+    static int xd;
+    static int yd;
+
+    x = sprAttr[PACMAN_SPRITENUM].x;
+    y = sprAttr[PACMAN_SPRITENUM].y;
+    xd = sprAttr[PACMAN_SPRITENUM].xdir;
+    yd = sprAttr[PACMAN_SPRITENUM].ydir;    
 
     if((xd < 0 && canGoWest(PACMAN_SPRITENUM)) || (xd > 0 && canGoEast(PACMAN_SPRITENUM)))
         sprAttr[PACMAN_SPRITENUM].x = x + xd;
@@ -715,29 +813,22 @@ void movePacman() {
       anDir = -anDir;
    
     if(yd < 0)
-        setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + NORTH_PACMAN_PAT_OFFSET);
+        setSpriteAttribute(PACMAN_SPRITENUM, anPos + NORTH_PACMAN_PAT_OFFSET);
     else 
         if(yd > 0)
-            setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + SOUTH_PACMAN_PAT_OFFSET);
+            setSpriteAttribute(PACMAN_SPRITENUM, anPos + SOUTH_PACMAN_PAT_OFFSET);
         else
             if(xd < 0)
-                setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + WEST_PACMAN_PAT_OFFSET);
+                setSpriteAttribute(PACMAN_SPRITENUM, anPos + WEST_PACMAN_PAT_OFFSET);
             else
-                setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos + EAST_PACMAN_PAT_OFFSET);
+                setSpriteAttribute(PACMAN_SPRITENUM, anPos + EAST_PACMAN_PAT_OFFSET);
 }
 
 
-#define J_N 239
-#define J_NE 111
-#define J_E 127
-#define J_SE 95
-#define J_S 223
-#define J_SW 159
-#define J_W 191
-#define J_NW 175
-#define J_BUTTON 247
 void checkControls() {
-        unsigned char k = getJoystick(LEFT_POS);
+        static unsigned char k;
+        k = getJoystick(LEFT_POS);
+
         if(k == J_E && canGoEast(PACMAN_SPRITENUM)) {
           sprAttr[PACMAN_SPRITENUM].xdir=2;
           sprAttr[PACMAN_SPRITENUM].ydir=0;
@@ -763,7 +854,7 @@ void checkControls() {
 }
 
 
-void wait(unsigned int x) {
+void hold(unsigned int x) {
     for(unsigned int y = 0; y<x;y++) {
       #pragma asm
       nop
@@ -782,61 +873,70 @@ void audioSilence() {
 
 void volumeup() {
   soundOut(LEFT_POS,9);  soundOut(RIGHT_POS,9);
-  //soundOut(LEFT_POS,11); soundOut(RIGHT_POS,11);
-  //soundOut(LEFT_POS,13); soundOut(RIGHT_POS,13);
-  //soundOut(LEFT_POS,15); soundOut(RIGHT_POS,15);
+}
+
+
+void rest(unsigned int x) {
+  audioSilence(); 
+  hold(x); 
+  volumeup();
 }
 
 
 #define EIGHTHNOTE 1000
+#define SIXTEENTHNOTE 500
+#define THIRTYSECONDNOTE 250
+#define SIXTYFOURTHNOTE 125
+#define ONETWENTYEIGHTHNOTE 63
+#define TWOFIFTYSIXTHNOTE 32
 #define playLeft(NOTE) PORTX82 = notes[NOTE].b1; PORTX82 = notes[NOTE].b2;
 #define playRight(NOTE) PORTX83 = notes[NOTE].b1; PORTX83 = notes[NOTE].b2;
 void introMusic() {
   volumeup();
 
-  playLeft(C0);                    playRight( C2);                  wait(EIGHTHNOTE);
-                                   playRight( C3);                  wait(EIGHTHNOTE);
-  playLeft(C1);                    playRight( G2);                  wait(EIGHTHNOTE);
-                                   playRight( E2);                  wait(EIGHTHNOTE);
-  playLeft(C0);                    playRight( C3);                  wait(EIGHTHNOTE);
-                                   playRight( G2);                  wait(EIGHTHNOTE);
-  playLeft(C1);                    playRight( E2);                  wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C2);                  hold(EIGHTHNOTE);
+                                   playRight( C3);                  hold(EIGHTHNOTE);
+  playLeft(C1);                    playRight( G2);                  hold(EIGHTHNOTE);
+                                   playRight( E2);                  hold(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C3);                  hold(EIGHTHNOTE);
+                                   playRight( G2);                  hold(EIGHTHNOTE);
+  playLeft(C1);                    playRight( E2);                  hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
 
-  playLeft(CS0);                   playRight( CS2);                 wait(EIGHTHNOTE);
-                                   playRight( CS3);                 wait(EIGHTHNOTE);
-  playLeft(CS1);                   playRight( GS2);                 wait(EIGHTHNOTE);
-                                   playRight( F2);                  wait(EIGHTHNOTE);
-  playLeft(CS0);                   playRight( CS3);                 wait(EIGHTHNOTE);
-                                   playRight( GS2);                 wait(EIGHTHNOTE);
-  playLeft(CS1);                   playRight( F2);                  wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
+  playLeft(CS0);                   playRight( CS2);                 hold(EIGHTHNOTE);
+                                   playRight( CS3);                 hold(EIGHTHNOTE);
+  playLeft(CS1);                   playRight( GS2);                 hold(EIGHTHNOTE);
+                                   playRight( F2);                  hold(EIGHTHNOTE);
+  playLeft(CS0);                   playRight( CS3);                 hold(EIGHTHNOTE);
+                                   playRight( GS2);                 hold(EIGHTHNOTE);
+  playLeft(CS1);                   playRight( F2);                  hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
 
-  playLeft(C0);                    playRight( C2);                  wait(EIGHTHNOTE);
-                                   playRight( C3);                  wait(EIGHTHNOTE);
-  playLeft(C1);                    playRight( G2);                  wait(EIGHTHNOTE);
-                                   playRight( E2);                  wait(EIGHTHNOTE);
-  playLeft(C0);                    playRight( C3);                  wait(EIGHTHNOTE);
-                                   playRight( G2);                  wait(EIGHTHNOTE);
-  playLeft(C1);                    playRight( E2);                  wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C2);                  hold(EIGHTHNOTE);
+                                   playRight( C3);                  hold(EIGHTHNOTE);
+  playLeft(C1);                    playRight( G2);                  hold(EIGHTHNOTE);
+                                   playRight( E2);                  hold(EIGHTHNOTE);
+  playLeft(C0);                    playRight( C3);                  hold(EIGHTHNOTE);
+                                   playRight( G2);                  hold(EIGHTHNOTE);
+  playLeft(C1);                    playRight( E2);                  hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
 
-  playLeft(G0);                    playRight( F2);                  wait(EIGHTHNOTE);
-                                   playRight( FS2);                 wait(EIGHTHNOTE);
-                                   playRight( G2);                  wait(EIGHTHNOTE/2);
-                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
-  playLeft(A1);                    playRight( G2);                  wait(EIGHTHNOTE);
-                                   playRight( GS2);                 wait(EIGHTHNOTE);
-                                   playRight( A3);                  wait(EIGHTHNOTE/2);
-                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
-  playLeft(B1);                    playRight( A3);                  wait(EIGHTHNOTE);
-                                   playRight( AS3);                 wait(EIGHTHNOTE);
-                                   playRight( B3);                  wait(EIGHTHNOTE/2);
-                                                                    audioSilence(); wait(EIGHTHNOTE/32); volumeup();
-  playLeft(C1);                    playRight( C3);                  wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
-                                                                    wait(EIGHTHNOTE);
+  playLeft(G0);                    playRight( F2);                  hold(EIGHTHNOTE);
+                                   playRight( FS2);                 hold(EIGHTHNOTE);
+                                   playRight( G2);                  hold(SIXTEENTHNOTE);
+                                                                    rest(TWOFIFTYSIXTHNOTE); 
+  playLeft(A1);                    playRight( G2);                  hold(EIGHTHNOTE);
+                                   playRight( GS2);                 hold(EIGHTHNOTE);
+                                   playRight( A3);                  hold(SIXTEENTHNOTE);
+                                                                    rest(TWOFIFTYSIXTHNOTE);
+  playLeft(B1);                    playRight( A3);                  hold(EIGHTHNOTE);
+                                   playRight( AS3);                 hold(EIGHTHNOTE);
+                                   playRight( B3);                  hold(SIXTEENTHNOTE);
+                                                                    rest(TWOFIFTYSIXTHNOTE);
+  playLeft(C1);                    playRight( C3);                  hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
+                                                                    hold(EIGHTHNOTE);
 
   audioSilence();
 }
@@ -862,16 +962,16 @@ int main()
    printf("THIS PROGRAM REQUIRES THE TRS-80 GRAPHICS ");
    printf("AND SOUND CARD V2.0.\n\n");
 
-   printf("AUDIO OFF... ");
+   printf("1...");
    audioSilence();
 
-   printf("SETUP AUDIO...\n");
+   printf("2...");
    initNoteData();
 
-   printf("SEEDING RANDOM NUMBER GENERATOR... ");
+   printf("3...");
    srand(getRRegister());
 
-   printf("GRAPHICS MODE SETUP...\n");
+   printf("4...");
 
    g.graphicsMode = GRAPHICSMODE1;
    g.externalVideoEnabled = FALSE;
@@ -882,35 +982,20 @@ int main()
    g.backgroundColor = BLACK;
    setGraphicsMode();
 
-   printf("HIDE PACMAN IF ON SCREEN... ");
+   printf("5...");
    sprAttr[PACMAN_SPRITENUM].x = 8;
    sprAttr[PACMAN_SPRITENUM].y = 16;
    sprAttr[PACMAN_SPRITENUM].color = BLACK;
-   setSpriteAttribute(PACMAN_SPRITENUM, sprAttr[PACMAN_SPRITENUM].x, sprAttr[PACMAN_SPRITENUM].y, sprAttr[PACMAN_SPRITENUM].color,anPos);
+   setSpriteAttribute(PACMAN_SPRITENUM,anPos);
 
 
-   printf("SETUP TEXT PATTERNS...\n");
+   printf("6...");
    setPatterns();
 
-   printf("SETUP MAZE... ");
+   printf("7...");
    drawMaze();
 
-   printf("INIT SPRITE PATTERNS...\n");
-
-   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFEFFFF80FFFFFFFEFEFCF8E0   <- closed mouth east face
-   //061E3E7E7EEEFEFFFFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth north face
-   //071F3F7B7FFFFF01FFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth west face
-   //071F3F7B7FFFFF01FFFFFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- closed mouth south face
-
-   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFFFCE080E0FCFFFEFEFCF8E0   <- open mouth east (1)
-   //08183C7C7CEEFEFFFFFFFF7F7F3F1F0720387C7E7EFFFFFFFFFFFFFEFEFCF8E0   <- open mouth north (1)
-   //071F3F7BFF3F0701073FFF7F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- open mouth west (1)
-   //071F3F7F7FFFFFFFFFFEEE7C7C3C1808E0F8FCFEFEFFFFFFFFFFFF7E7E7C3820   <- open mouth south (1)
-
-   //071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEF8E080000080E0F8FEFCF8E0   <- open mouth east (2)
-   //0010307878ECFCFEFFFFFF7F7F3F1F0700080C1E1E3F3F7FFFFFFFFEFEFCF8E0   <- open mouth north (2)
-   //071F3F7B1F0701000001071F7F3F1F07E0F8FCFEFEFFFFFFFFFFFFFEFEFCF8E0   <- open mouth west (2)
-   //071F3F7F7FFFFFFFFEFCEC7878301000E0F8FCFEFEFFFFFF7F3F3F1E1E0C0800   <- open mouth south (2)
+   printf("8...");
 
    setSpritePattern(0, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFEFFFF80FFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (east)
    setSpritePattern(1, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFFFCE080E0FCFFFEFEFCF8E0"); // PACMAN, mouth open 1 (east)
@@ -933,10 +1018,10 @@ int main()
    
    sprAttr[PACMAN_SPRITENUM].color = DARKYELLOW;
 
-   printf("PLAY INTRO MUSIC... ");
-   introMusic();
+   printf("9...");
+   introMusic(); 
 
-   printf("ANIMATE SPRITES...\n");  
+   printf("10...\n");  
    while(bRunning == TRUE) {
         checkControls();
         movePacman();
