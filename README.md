@@ -114,7 +114,7 @@ pseudographics, but then you could overlay color and sprites over the top of it.
 current (March 2018) schematics don't implement this idea.
 
 (July 2018) I haven't done anything with ExtVid yet.  I've come to realize that it's unlikely to just work out of the box, because the 
-RESET line on the TMS9118A does double duty as some kind of video sync signal.  So I'd probably have to device a sync separator 
+RESET line on the TMS9118A does double duty as some kind of video sync signal.  So I'd probably have to come up with a sync separator 
 circuit for the ExtVid line, then amplify that signal up to whatever ungodly voltage causes the RESET to act like a SYNC signal.  I probably should just
 hook up a video signal to see how bad it tears as it moves down the screen -- maybe it's still usable without all that extra circuitry -- just haven't 
 tried it yet.
