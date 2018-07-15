@@ -1,7 +1,7 @@
 # TRS80GS
 Storage area for my TRS-80 Model 1 Graphics, Sound, and Gaming cartidge
 
-![Photo of prototype PCB](/img/TRS-80%20Model%201%20GraphicsSoundJoystick%20Card%20Prototype%20-%20Imgur.jpg?raw=true "Prototype PCB")
+![Version 3 of PCB](/img/TRS80GS_Version_3.jpg?raw=true "Version 3 of PCB")
 
 
 My friend's first computer was a 1977 TRS-80 Model 1.  I'm a few years younger than him, so my first computer was a TI-99/4A, 
@@ -33,7 +33,10 @@ figured I'd start simple and if I need to implement interrupts I'll have to dig 
 
 **Be Aware**:  ~~I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
 I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
-"40 year old museum piece" while I figure out how to get the "glue" working properly.~~  I *have* now built a working prototype.  You'll find the eagecad and such in the rev2 folder.  There's also some source code to test it once you get the board built.  
+"40 year old museum piece" while I figure out how to get the "glue" working properly.~~  I *have* now built a working prototype.  
+You'll find the eagecad and such in the rev2 folder.  There's also some source code to test it once you get the board built.  
+
+**Update**:  The photo is of the rev3 version of this card.  It's fully working.
 
 Theory of Operation
 ===================
@@ -48,6 +51,18 @@ Nope, we pivoted on the design by rev2.  We got rid of silly things like glue lo
 a CPLD that manages *all* of the decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
 "adjust" the addresses in code now, not with SPDT dip switches (what was I thinking?)
 
+Rev3 includes some addtions.  First, it fixes the sound problem that the rev2 board had so we get both sound chips working (all 6 audio channels and 2 noise channels).  Second, it includes
+a 32k SRAM.  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
+also cleans up the joystick bodges that I had to do on the Rev2 board.  Rev3 works fully, and I've been building a Pacman game on it.
+
+Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it is an upgraded version of Rev3 with one major improvement -- a UART.  I *should* be able to connect a 
+FTDI cable via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  Initially I'll just use it to move my Pacman code back and forth, but in 
+truth with a fully functional UART, I could literally build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
+I *could* probably build a PPP interface and do stuff like surf the web or use FTP from a 40 year old TRS-80 Model 1, but we'll save all that software work for a later date.
+
+The only trouble with having a UART is that now I have *two* interrupts to deal with, so you won't be able to simultaneously use the VPD's interrupts *and* the UART's interrupts.  I've included
+a jumper to allow you to switch one you're working with.
+
 TMS9118A
 --------
 This little VDP chip has an interesting history.  It didn't disappear with the TI-99/4A.  It got used in the Colecovision, and
@@ -57,21 +72,36 @@ an 8 bit data bus and a few bus flags (MODE, CSR*, and CSW*).  It also has CAS a
 sound with this card, we're also giving the TRS-80 Model 1 an additional 16k of RAM, though it's only accessible through a 
 tiny keyhole of two IO ports, and much of it is used up by the VDP chip itself (depending on what mode you set it to).
 
-At the time of this writing (March 2018), I've managed to bodge up a working TMS9118A on a breadboard, and drive it with an 
+~~At the time of this writing (March 2018), I've managed to bodge up a working TMS9118A on a breadboard, and drive it with an 
 Arduino.  I've uploaded the Arduino code for that, and an incredibly frightening breadboard photo that looks like something out of 
 the movie Aliens.  The code doesn't do anything too spectacular, but just changes the background color, which means that 
 I've successfully managed to figure out how to drive the WRITE side of the chip (writing to what the VDP calls "control 
-registers", which are how you set up almost everything in the VDP).  I've also included a small video showing it doing that.
+registers", which are how you set up almost everything in the VDP).  I've also included a small video showing it doing that.~~
+
+We're way past that stage now.  The TMS9118 works like a dream, and I've been building a Pacman clone against it, using the z88dk C compiler.  So far I'm fitting inside my nice 32k RAM addition
+just fine.  There's a lot of fluff in my code, and I'm pretty sure I could get it crammed down another 25% if I worked at it.  Right now I've got an animated pacman that can move around inside
+the maze, and I've got the intro music working.
 
 SN76489
 -------
-I haven't done much with the sound chips yet, but hopefully they'll be a bit easier to manage than the VDP.  Bit 0 of the 
-address bus will toggle between them.  Stereo baby!
+~~I haven't done much with the sound chips yet, but hopefully they'll be a bit easier to manage than the VDP.  Bit 0 of the 
+address bus will toggle between them.  Stereo baby!~~
+
+Sound didn't work quite right in the rev2 board design.  There's a "Ready" line on the SN76489 that needed to be tied to the WAIT line on the TRS-80 interface.  Why?  Because the SN76489 doesn't
+like receiving a second byte when it's still processing the first one.  I *could* write all my code to put a delay inbetween each byte send, but that's kind of lame and non-deterministic.  The
+WAIT line was originally conceived so that the TRS-80 could interface to "slow" peripherals, and although the sound chip isn't *super* slow, it seemed the way to go was to tie that READY line 
+to it.  Unfortunately on the rev2 board that meant that I couldn't use *both* sound chips, because I didn't have a free OR gate anywhere to run the two Ready lines through.  So, I pulled one of them
+and just wired the other one up on the rev2 board.  It worked as expected.  This has all been cleaned up in the rev3 and rev4 boards.
 
 74LS244
 -------
-This is managing the joystick switches.  It takes 5 switches to handle up, down, left, right, and trigger.  I don't have any
-kind of debounce circuit in there, so I'm guessing that'll be a problem.  We'll see when we get there.  
+This is managing the joystick switches.  It takes 5 switches to handle up, down, left, right, and trigger.  ~~I don't have any
+kind of debounce circuit in there, so I'm guessing that'll be a problem.  We'll see when we get there.~~
+
+Joystick circuits worked more or less flawlessly, though I had stuff wired backward on the PCB for rev2.  I had to bodge some jumper wires to get them working because of that, but that's all cleaned 
+up in rev3 and rev4.
+
+
 
 ExtVid
 ------
@@ -83,3 +113,8 @@ works, it could create some interesting possibilities.  You'd still have the "fe
 pseudographics, but then you could overlay color and sprites over the top of it.  I guess we'll see when we get there.  The 
 current (March 2018) schematics don't implement this idea.
 
+(July 2018) I haven't done anything with ExtVid yet.  I've come to realize that it's unlikely to just work out of the box, because the 
+RESET line on the TMS9118A does double duty as some kind of video sync signal.  So I'd probably have to device a sync separator 
+circuit for the ExtVid line, then amplify that signal up to whatever ungodly voltage causes the RESET to act like a SYNC signal.  I probably should just
+hook up a video signal to see how bad it tears as it moves down the screen -- maybe it's still usable without all that extra circuitry -- just haven't 
+tried it yet.
