@@ -1,5 +1,5 @@
 # TRS80GS
-Storage area for my TRS-80 Model 1 Graphics, Sound, and Gaming cartidge
+Storage area for my TRS-80 Model 1 Graphics, Sound, Gaming, and Communication cartidge
 
 ![Version 3 of PCB](/img/TRS80GS_Version_3.jpg?raw=true "Version 3 of PCB")
 
@@ -34,9 +34,9 @@ figured I'd start simple and if I need to implement interrupts I'll have to dig 
 **Be Aware**:  ~~I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
 I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
 "40 year old museum piece" while I figure out how to get the "glue" working properly.~~  I *have* now built a working prototype.  
-You'll find the eagecad and such in the rev2 folder.  There's also some source code to test it once you get the board built.  
+You'll find the eagecad and such in the rev2 folder (though you'd be better off using the rev3 version).  There's also some source code to test it once you get the board built.  
 
-**Update**:  The photo is of the rev3 version of this card.  It's fully working.
+**Update**:  The photo is of the rev3 version of this card.  It's fully working, and better than the rev2 which has a few bugs.
 
 Theory of Operation
 ===================
@@ -47,7 +47,7 @@ and using the OUT* and IN* pins to decide what we're doing.  In this way, the po
 I'm hard wiring bit zero as a toggle bit though, so really you're adjusting the 7 most significant bits, and bit zero toggles 
 between related devices or related pins on a device.~~
 
-Nope, we pivoted on the design by rev2.  We got rid of silly things like glue logic chips and SPDT dip switches, and simply added 
+Strike all that... I pivoted on the design by rev2.  We got rid of silly things like glue logic chips and SPDT dip switches, and simply added 
 a CPLD that manages *all* of the decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
 "adjust" the addresses in code now, not with SPDT dip switches (what was I thinking?)
 
@@ -56,12 +56,14 @@ a 32k SRAM.  The original expansion system for the TRS-80 used DRAMs, but SRAM a
 also cleans up the joystick bodges that I had to do on the Rev2 board.  Rev3 works fully, and I've been building a Pacman game on it.
 
 Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it is an upgraded version of Rev3 with one major improvement -- a UART.  I *should* be able to connect a 
-FTDI cable via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  Initially I'll just use it to move my Pacman code back and forth, but in 
-truth with a fully functional UART, I could literally build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
+[FTDI cable](http://www.ftdichip.com/Products/Cables/USBTTLSerial.htm) via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  
+Initially I'll just use it to move my Pacman code back and forth, but in 
+truth with a fully functional UART, I could build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
 I *could* probably build a PPP interface and do stuff like surf the web or use FTP from a 40 year old TRS-80 Model 1, but we'll save all that software work for a later date.
 
 The only trouble with having a UART is that now I have *two* interrupts to deal with, so you won't be able to simultaneously use the VPD's interrupts *and* the UART's interrupts.  I've included
-a jumper to allow you to switch which one you're working with.
+a jumper to allow you to switch which one you're working with.  I *suppose* I could add a latch behind an address so that you could tell which interrupt was being invoked, but honestly I 
+can't imagine why we need to be both loading data *and* altering the screen at the same time, so Rev4 will use a jumper.
 
 TMS9118A
 --------
@@ -79,8 +81,8 @@ I've successfully managed to figure out how to drive the WRITE side of the chip 
 registers", which are how you set up almost everything in the VDP).  I've also included a small video showing it doing that.~~
 
 We're way past that stage now.  The TMS9118 works like a dream, and I've been building a Pacman clone against it, using the z88dk C compiler.  So far I'm fitting inside my nice 32k RAM addition
-just fine.  There's a lot of fluff in my code, and I'm pretty sure I could get it crammed down another 25% if I worked at it.  Right now I've got an animated pacman that can move around inside
-the maze, and I've got the intro music working.
+just fine.  There's a lot of fluff in my code, and I'm pretty sure I could get it crammed down at least 25% if I worked at it.  Right now I've got an animated pacman that can move around inside
+the maze, and I've got the intro music working.  Ghosts and dots coming soon....
 
 SN76489
 -------
@@ -99,8 +101,8 @@ This is managing the joystick switches.  It takes 5 switches to handle up, down,
 kind of debounce circuit in there, so I'm guessing that'll be a problem.  We'll see when we get there.~~
 
 Joystick circuits worked more or less flawlessly, though I had stuff wired backward on the PCB for rev2.  I had to bodge some jumper wires to get them working because of that, but that's all cleaned 
-up in rev3 and rev4.
-
+up in Rev3 and Rev4.  I originally was toying with the idea of building some kind of one-way parallel interface that used the joystick ports, but the more I thought about it the less I liked it and
+decided to add the UART instead.
 
 
 ExtVid
