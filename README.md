@@ -48,14 +48,14 @@ I'm hard wiring bit zero as a toggle bit though, so really you're adjusting the 
 between related devices or related pins on a device.~~
 
 Strike all that... I pivoted on the design by rev2.  We got rid of silly things like glue logic chips and SPDT dip switches, and simply added 
-a CPLD that manages *all* of the decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
+a [CPLD](https://www.microchip.com/wwwproducts/en/ATF22V10C) that manages the address decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
 "adjust" the addresses in code now, not with SPDT dip switches (what was I thinking?)
 
 Rev3 includes some addtions.  First, it fixes the sound problem that the rev2 board had so we get both sound chips working (all 6 audio channels and 2 noise channels).  Second, it includes
-a 32k SRAM.  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
+a [32k SRAM](https://www.mouser.com/ProductDetail/511-M48Z35Y70PC1).  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
 also cleans up the joystick bodges that I had to do on the Rev2 board.  Rev3 works fully, and I've been building a Pacman game on it.
 
-Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it is an upgraded version of Rev3 with one major improvement -- a UART.  I *should* be able to connect a 
+Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it is an upgraded version of Rev3 with one major improvement -- a [UART](https://en.wikipedia.org/wiki/16550_UART).  I *should* be able to connect a 
 [FTDI cable](http://www.ftdichip.com/Products/Cables/USBTTLSerial.htm) via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  
 Initially I'll just use it to move my Pacman code back and forth, but in 
 truth with a fully functional UART, I could build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
