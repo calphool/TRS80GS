@@ -61,7 +61,7 @@ truth with a fully functional UART, I could literally build a kind of network in
 I *could* probably build a PPP interface and do stuff like surf the web or use FTP from a 40 year old TRS-80 Model 1, but we'll save all that software work for a later date.
 
 The only trouble with having a UART is that now I have *two* interrupts to deal with, so you won't be able to simultaneously use the VPD's interrupts *and* the UART's interrupts.  I've included
-a jumper to allow you to switch one you're working with.
+a jumper to allow you to switch which one you're working with.
 
 TMS9118A
 --------
