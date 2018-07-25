@@ -327,6 +327,7 @@ int main(int argc,char** argv)
         	for(int i=0;i<strlen(workbuff);i++) {
         		c = *(workbuff+i);
                 write(tty_fd, &c, 1);
+                sleep(8);
         	}
         }
 	}

@@ -1,7 +1,7 @@
 # TRS80GS
 Storage area for my TRS-80 Model 1 Graphics, Sound, Gaming, and Communication cartidge
 
-![Version 3 of PCB](/img/TRS80GS_Version_3.jpg?raw=true "Version 3 of PCB")
+![Version 3 of PCB](/img/Darth_Video.png?raw=true "Version 4 of PCB")
 
 
 My friend's first computer was a 1977 TRS-80 Model 1.  I'm a few years younger than him, so my first computer was a TI-99/4A, 
@@ -56,7 +56,7 @@ Rev3 includes some addtions.  First, it fixes the sound problem that the rev2 bo
 a [32k SRAM](https://www.mouser.com/ProductDetail/511-M48Z35Y70PC1).  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
 also cleans up the joystick bodges that I had to do on the Rev2 board.  Rev3 works fully, and I've been building a Pacman game on it.
 
-Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it is an upgraded version of Rev3 with one major improvement -- a [UART](https://en.wikipedia.org/wiki/16550_UART).  I *should* be able to connect a 
+~~Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it~~ is an upgraded version of Rev3 with one major improvement -- a [UART](https://en.wikipedia.org/wiki/16550_UART).  I *should* be able to connect a 
 [FTDI cable](http://www.ftdichip.com/Products/Cables/USBTTLSerial.htm) via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  
 Initially I'll just use it to move my Pacman code back and forth, but in 
 truth with a fully functional UART, I could build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
@@ -65,6 +65,15 @@ I *could* probably build a PPP interface and do stuff like surf the web or use F
 The only trouble with having a UART is that now I have *two* interrupts to deal with, so you won't be able to simultaneously use the VPD's interrupts *and* the UART's interrupts.  I've included
 a jumper to allow you to switch which one you're working with.  I *suppose* I could add a latch behind an address so that you could tell which interrupt was being invoked, but honestly I 
 can't imagine why we need to be both loading data *and* altering the screen at the same time, so Rev4 will use a jumper.
+
+Rev4 is now here and "working" though it took a little bit of hacking to get it up and running.  The original design for 
+Rev4 included a separate crystal for the UART (1.8432mhz), but that proved problematic.  It caused the VDP crystal to 
+act flaky due to interference.  So, I decided to try removing its crystal and all its support caps and resistors, and just 
+drive the XTAL in for the UART from the CPUCLK output of the VDP.  It's the wrong speed (3.5mhz instead of 1.8432mhz), but 
+luckily the UART has a divider value that you plug into a register during setup that allows it to use any chip slower than
+16mhz.  I coded a couple of little test programs, one for the MAC (the "server") and one for the TRS-80 (the "client").  I
+was able to transfer data back and forth, but I'm reaching out to folks on reddit to see if there's a better way to code 
+it, since I have an arbitrary 8 millisecond wait on each byte transferred because I don't understand hardware flow control.
 
 TMS9118A
 --------
