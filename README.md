@@ -34,7 +34,7 @@ figured I'd start simple and if I need to implement interrupts I'll have to dig 
 **Be Aware**:  ~~I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
 I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
 "40 year old museum piece" while I figure out how to get the "glue" working properly.~~  I *have* now built a working prototype.  
-You'll find the eagecad and such in the rev2 folder (though you'd be better off using the rev3 version).  There's also some source code to test it once you get the board built.  
+You'll find the eagecad and such in the rev2 folder (though you'd be better off using the rev4 version).  There's also some source code to test it once you get the board built.  
 
 **Update**:  The photo is of the Rev4 version of this card.  It's fully working, and better than the rev2 and rev3.
 
