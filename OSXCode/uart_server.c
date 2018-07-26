@@ -22,6 +22,10 @@ unsigned int iSerialDeviceCtr = 0;
 unsigned int iActiveDevice = -1;
 char serialDeviceNames[256][256];
 char buf[256];
+unsigned char delayms;
+int tty_fd;
+long chksum;
+unsigned int byteCtr;
 
 
 
@@ -155,36 +159,69 @@ void sleep_ms(int milliseconds) {
     nanosleep(&ts, NULL);
 }
 
-void lsResponse(int tty_fd) {
+
+void sendByte(char b) {
+    chksum += b;
+    byteCtr++;
+    write(tty_fd,&b,1);
+    tcdrain(tty_fd);
+    sleep_ms(delayms);    
+}
+
+
+void sendString(char* s) {
+    char c;
+    int x;
+
+    x = strlen(s);
+    for(int i=0;i<x;i++) {
+        c=*(s+i);
+        sendByte(c);
+    }
+}
+
+void sendResponse(char* s) {
+    sendString(s);
+    sendByte(13);
+}
+
+
+void lsResponse() {
     DIR *dp;
     struct dirent *ep;
     char c;
     int status;
+    time_t now;
+    time_t later;
+    struct dirent **namelist;
+    int n;
 
+    chksum = 0;
+    byteCtr = 0;
     dp = opendir(".");
+    time(&now);
+
     if(dp != NULL) {
     	while((ep = readdir(dp)) != NULL) {
     		strcpy(buf,ep->d_name);
     		String_Upper(buf);
     		if(*(buf) != '.') {
-    			printf("Sending: %s\n",buf);
-            	for(int i=0;i<strlen(buf);i++) {
-            		c=*(buf+i);
-            		write(tty_fd,&c,1);
-            		tcdrain(tty_fd);
-            		sleep_ms(8);
-            	}
-	            c=':';
-	            write(tty_fd,&c,1);
-	            tcdrain(tty_fd);
-           		sleep_ms(8);
+                sendString(buf);
+	            sendByte(':');
         	}
         }
     }
-    c=13;
-    write(tty_fd,&c,1);
-    tcdrain(tty_fd);
-    sleep_ms(8);
+
+
+    sendByte(13);
+
+    time(&later);
+    double seconds = difftime(later, now);
+
+    printf("Checksum: %ld\n",chksum);
+    printf("Bytes sent: %d\n", byteCtr);
+    printf("Duration: %d\n", (int)seconds);
+    printf("Bps: %d\n", byteCtr/(int)seconds);
 }
 
 
@@ -221,7 +258,7 @@ set_interface_attribs (int fd, int speed, int parity)
         tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
         tty.c_cflag |= parity;
         tty.c_cflag &= ~CSTOPB;
-        tty.c_cflag &= ~CRTSCTS;
+        //tty.c_cflag &= ~CRTSCTS;
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
         {
@@ -250,7 +287,24 @@ set_blocking (int fd, int should_block)
 }
 
 
+void handleSetDelay(char* s) {
+    char *token = strtok(s, " "); // command itself
+    
+    token = strtok(NULL, " "); // numeric value
+    if(token == NULL) {
+        sendResponse("NO_VALUE_SPECIFIED");
+        return;
+    }
 
+    int val = atoi(token);
+    if(val == 0) {
+        sendResponse("BAD_NUMERIC_VALUE");
+        return;
+    }
+
+    delayms = val;
+    sendResponse("OK");
+}
 
 
 int main(int argc,char** argv)
@@ -259,10 +313,10 @@ int main(int argc,char** argv)
 	RETURNCODE r;
 	unsigned char c;
 	struct termios tio;
-	int tty_fd;
 	char workbuff[512];
 
     setbuf(stdout, NULL);
+    delayms = 4;
     printf("Starting...\n");
 
 	memset(desiredDevice,0x0,sizeof(desiredDevice));
@@ -289,7 +343,7 @@ int main(int argc,char** argv)
         exit(-5);
     }
 
-    set_interface_attribs(tty_fd, B38400, 0);
+    set_interface_attribs(tty_fd, B57600, 0);
     set_blocking(tty_fd, 0);
 
     bool bRunning = true;
@@ -298,6 +352,7 @@ int main(int argc,char** argv)
    		int iCtr = 0;
 	    printf("Waiting for command.\n");
 
+        c = 0x0;
 	    while( c != 13) {
 	        	if(read(tty_fd, &c, 1) > 0) {
 	        		if(c != 13) {
@@ -309,27 +364,29 @@ int main(int argc,char** argv)
 	        	else
 	        		sleep_ms(1);
 		}
-		c=0x0;
 
         String_Upper(workbuff);
-        if(strncmp(workbuff,"LS",strlen(workbuff)) == 0) {
+        if(startsWith("LS",workbuff)) {
         	printf("Received LS command.\n");
-        	lsResponse(tty_fd);
+        	lsResponse(workbuff);
         	printf("Response sent.\n\n");
+        }
+        else if(startsWith("SETDELAY",workbuff)) {
+            printf("Transmit Delay change requested...");
+            handleSetDelay(workbuff);
+            printf("Delay changed to %d.\n\n",delayms);
         }
         else if(strncmp(workbuff, "KILL", strlen(workbuff)) == 0) {
         	printf("Received KILL command.\n");
+            sendResponse("OK");
         	bRunning = false;
+            printf("Goodbye cruel world.");
         }
         else {
         	printf("Received unknown command: %s\n",workbuff);
-        	strcpy(workbuff,"ERR001\n");
-        	for(int i=0;i<strlen(workbuff);i++) {
-        		c = *(workbuff+i);
-                write(tty_fd, &c, 1);
-                sleep(8);
-        	}
-        }
+        	sendResponse("UNKNOWN_COMMAND");
+            printf("Sent UNKNOWN_COMMAND\n");
+        }           
 	}
     
     close(tty_fd);
