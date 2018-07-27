@@ -47,10 +47,11 @@ and using the OUT* and IN* pins to decide what we're doing.  In this way, the po
 I'm hard wiring bit zero as a toggle bit though, so really you're adjusting the 7 most significant bits, and bit zero toggles 
 between related devices or related pins on a device.~~
 
-Strike all that... I pivoted on the design by rev2.  We got rid of silly things like glue logic chips and SPDT dip switches, and simply added 
+Strike all that... I pivoted on the design by rev2.  We got rid of silly things like glue logic chips (well, until rev4) and SPDT dip switches, and simply added 
 a [CPLD](https://www.microchip.com/wwwproducts/en/ATF22V10C) that manages the address decoding and control signal generation.  The code for the CPLD is now in the repo.  So you 
 "adjust" the addresses in code now, not with SPDT dip switches (what was I thinking?)  You program the CPLD with a Stager 4800 programmer, and a very particular version of 
-its software (VSpeed 5.0).  Details are in the .PLD file in the repo.
+its software (VSpeed 5.0).  Details are in the .PLD file in the repo.  I may eventually add another CPLD and get rid of the couple of glue chips I've got in the rev4 version.  Right now it doesn't 
+seem worth it (get rid of two small chips and replace them with a big one?  Sounds like break even right now).
 
 Rev3 includes some addtions.  First, it fixes the sound problem that the rev2 board had so we get both sound chips working (all 6 audio channels and 2 noise channels).  Second, it includes
 a [32k SRAM](https://www.mouser.com/ProductDetail/511-M48Z35Y70PC1).  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
