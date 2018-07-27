@@ -2,9 +2,12 @@
 #include <stdlib.h>
 
 
+#define DEBUG 1
+#undef DEBUG
 
 unsigned char control_reg;
 unsigned char b;
+unsigned char workBuff[300];
 
 
 __sfr __at 0xe0 UART_RECEIVE_HOLDING_REGISTER;
@@ -31,7 +34,6 @@ void hold(unsigned int x) {
     }
 }
 */
-
 
 void init_uart() {
   // disable interrupts
@@ -98,9 +100,15 @@ unsigned char getByte() {
     return UART_RECEIVE_HOLDING_REGISTER;
 }
 
+
 void sendString(char* s) {
   static int i;
   static int j;
+
+    #ifdef DEBUG
+      puts("  ENTER-SENDSTRING(),");
+    #endif
+
 
   j = strlen(s);
 
@@ -108,11 +116,49 @@ void sendString(char* s) {
     sendByte(*(s+i));
   }
   sendByte(13);
+
+    #ifdef DEBUG
+      puts("  EXIT-SENDSTRING(),");
+    #endif
+}
+
+char* getString() {
+  static int i;
+  static char c;
+
+    #ifdef DEBUG
+      puts("  ENTER-GETSTRING(),");
+    #endif
+
+
+  i = 0;
+  c = 0;
+
+  while(c != 13) {
+    c = getByte();
+    if(c != 13 && c != 10) {
+      workBuff[i] = c;
+      workBuff[i+1] = 0x0;
+      i++;
+    }
+  }
+
+    #ifdef DEBUG
+      puts("  EXIT-GETSTRING(),");
+    #endif
+
+  return workBuff;
 }
 
 void printLSResponse() {
    static unsigned char c;
    static long chksum;
+
+    #ifdef DEBUG
+      puts("  ENTER-PRINTLSRESPONSE(),");
+    #endif
+
+   printf("\n  ");
 
    chksum = 0;
    do {
@@ -126,7 +172,12 @@ void printLSResponse() {
          putchar(c);
     }
     while(c != 13); 
-    printf("\nCHKSUM: %ld\n\n", chksum); 
+    printf("\nCHKSUM: %ld\n", chksum); 
+
+
+    #ifdef DEBUG
+      puts("  EXIT-PRINTLSRESPONSE(),");
+    #endif
 }
 
 void cls() {
@@ -145,6 +196,48 @@ void cls() {
   #pragma endasm
 }
 
+int startsWith (char* base, char* str) {
+    return (strstr(base, str) - base) == 0;
+}
+
+void handleLoadCmd(char* s) {
+    #ifdef DEBUG
+      puts("  ENTER-HANDLELOADCMD(),");
+    #endif
+
+
+  sendString(s);
+  getString();
+
+  if(strncmp(workBuff,"NO_FILE_SPECIFIED",strlen(workBuff)) == 0 ||
+     strncmp(workBuff,"FILE_NOT_CMD_FORMAT",strlen(workBuff)) == 0 ||
+     strncmp(workBuff,"UNABLE_TO_OPEN_FILE",strlen(workBuff)) == 0) {
+      puts(workBuff);
+      return;
+  }
+
+  while(strncmp(workBuff,"LOADCMD_DONE",strlen(workBuff)) != 0) {
+    puts(workBuff);
+    sendString("OK");
+    getString();
+  }
+
+    #ifdef DEBUG
+      puts("  EXIT-HANDLELOADCMD(),");
+    #endif
+}
+
+void sendCommandAndDumpResult(char* s) {
+    #ifdef DEBUG
+      puts("  ENTER-SENDCOMMANDANDDUMPRESULT(),");
+    #endif
+    sendString(s);
+    printLSResponse(); 
+    #ifdef DEBUG     
+      puts("  EXIT-SENDCOMMANDANDDUMPRESULT(),");
+    #endif
+}
+
 int main()
 {
   char buf[255];
@@ -154,22 +247,35 @@ int main()
   printf("INITIALIZING UART...\n");
   init_uart();
 
-
-  while(strncmp(buf,"X") != 0) {
-    printf(">");
+  printf("\nCOMMAND?");
+  while(strncmp(buf,"X",strlen(buf)) != 0) {
+    printf("\n>");
     fgets(buf,255,stdin);
     if ((strlen(buf) > 0) && (buf[strlen (buf) - 1] == '\n'))
             buf[strlen (buf) - 1] = '\0';
-          
-    if(strncmp(buf,"X") != 0) {
-      sendString(buf);
-      printLSResponse();
-      printf("\n");
+
+    if(strncmp(buf,"X",strlen(buf)) == 0) {
+      break;
+    }
+    else if (startsWith(buf,"LOADCMD") == 1) {
+      handleLoadCmd(buf);
+    }
+    else if(startsWith(buf,"LS") == 1) {
+      sendCommandAndDumpResult(buf);
+    }
+    else if(startsWith(buf,"KILL") == 1) {
+      sendCommandAndDumpResult(buf);  
+    }
+    else if(startsWith(buf,"SETDELAY") == 1) {
+      sendCommandAndDumpResult(buf);
+    }
+    else {
+      printf("UNKNOWN COMMAND: %s\n",buf);
     }
 
   }
 
-  printf("Done.\n");
+  printf("DONE.\n");
 
   exit(-1);
 }
