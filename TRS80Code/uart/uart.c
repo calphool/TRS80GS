@@ -7,7 +7,7 @@
 
 unsigned char control_reg;
 unsigned char b;
-unsigned char workBuff[300];
+unsigned char workBuff[400];
 
 
 __sfr __at 0xe0 UART_RECEIVE_HOLDING_REGISTER;

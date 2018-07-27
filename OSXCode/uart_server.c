@@ -527,6 +527,7 @@ void handleLoadCommand(char* s) {
              //printf("\n");
              //printf("  base64 : %s\n", base64Buff);
              sprintf(responseBuff,"OBJ %X %s %X", address, base64Buff, cksum);
+             //printf("  %s\n",responseBuff);
              sendResponse(responseBuff);
              free(base64Buff);
              getCommand();
@@ -540,7 +541,7 @@ void handleLoadCommand(char* s) {
              printf("Reading Transfer Address, block length = %u.\n",len);
              fread(&address,1,len,fp);
              printf("   Entry point is 0x%x (%d)\n",address,address);
-             sprintf(responseBuff,"ENTPT %x",address);
+             sprintf(responseBuff,"ENTPT %X",address);
              sendResponse(responseBuff);
              getCommand();
              if(stricmp(workbuff, "OK", strlen(workbuff)) != 0) {
