@@ -34,7 +34,7 @@ figured I'd start simple and if I need to implement interrupts I'll have to dig 
 **Be Aware**:  ~~I haven't built or tested my card yet (as of March 2018).  So it *probably* doesn't work as is.  We'll see as soon as 
 I get finished testing the components individually with an Arduino as a kind of "hardware emulator".  I don't want to risk a 
 "40 year old museum piece" while I figure out how to get the "glue" working properly.~~  I *have* now built a working prototype.  
-You'll find the eagecad and such in the rev2 folder (though you'd be better off using the rev4 version).  There's also some source code to test it once you get the board built.  
+You'll find the eaglecad and such in the rev2 folder (though you'd be better off using the rev4 version).  There's also some source code to test it once you get the board built.  
 
 **Update**:  The photo is of the Rev4 version of this card.  It's fully working, and better than the rev2 and rev3.
 
@@ -56,15 +56,15 @@ Rev3 includes some addtions.  First, it fixes the sound problem that the rev2 bo
 a [32k SRAM](https://www.mouser.com/ProductDetail/511-M48Z35Y70PC1).  The original expansion system for the TRS-80 used DRAMs, but SRAM actually ends up being much better, especially when you use a non-volatile one like I have.  The Rev3 board 
 also cleans up the joystick bodges that I had to do on the Rev2 board.  Rev3 works fully, and I've been building a Pacman game on it.
 
-~~Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it~~ is an upgraded version of Rev3 with one major improvement -- a [UART](https://en.wikipedia.org/wiki/16550_UART).  I *should* be able to connect a 
-[FTDI cable](http://www.ftdichip.com/Products/Cables/USBTTLSerial.htm) via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  
-Initially I'll just use it to move my Pacman code back and forth, but in 
-truth with a fully functional UART, I could build a kind of network interface and create something loosely equivalent to a LAN share, which would be sort of cool.  In fact,
-I *could* probably build a PPP interface and do stuff like surf the web or use FTP from a 40 year old TRS-80 Model 1, but we'll save all that software work for a later date.
+~~Rev4 is currently (July 2018) being built by our Chinese friends at allpcb.com, and it~~ is an upgraded version of Rev3 with one major improvement -- a [UART](https://en.wikipedia.org/wiki/16550_UART).  I 
+~~*should* be~~ am able to connect a [FTDI cable](http://www.ftdichip.com/Products/Cables/USBTTLSerial.htm) via USB from my Mac to this UART and I should be able to transfer binary data back and forth.  
+Initially I'll just use it to move my Pacman code back and forth, but in truth with a fully functional UART, I could build a kind of network interface and create something loosely equivalent to a LAN share, 
+which would be sort of cool.  In fact, I *could* probably build a SLIP interface and do stuff like surf the web or use FTP from a 40 year old TRS-80 Model 1, but we'll save all that software work for a later date.
 
 The only trouble with having a UART is that now I have *two* interrupts to deal with, so you won't be able to simultaneously use the VPD's interrupts *and* the UART's interrupts.  I've included
 a jumper to allow you to switch which one you're working with.  I *suppose* I could add a latch behind an address so that you could tell which interrupt was being invoked, but honestly I 
-can't imagine why we need to be both loading data *and* altering the screen at the same time, so Rev4 will use a jumper.
+can't imagine why we need to be both loading data *and* altering the screen at the same time, so Rev4 will use a jumper.  I think I'll start out without coding any interrupt stuff and see what I can get away with
+using plain old polling.  It'll be slower, but simpler.  Once I get it working, then I'll look into trickier stuff like interrupt handling in z88dk.
 
 Rev4 is now here and "working" though it took a little bit of hacking to get it up and running.  The original design for 
 Rev4 included a separate crystal for the UART (1.8432mhz), but that proved problematic.  It caused the VDP crystal to 
