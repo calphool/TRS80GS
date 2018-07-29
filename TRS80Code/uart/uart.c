@@ -5,9 +5,17 @@
 #define DEBUG 1
 #undef DEBUG
 
+
+#define WHITESPACE 64
+#define EQUALS     65
+#define INVALID    66
+
+
 unsigned char control_reg;
 unsigned char b;
 unsigned char workBuff[400];
+unsigned char decodedData[300];
+unsigned int szDecodedData;
 
 
 __sfr __at 0xe0 UART_RECEIVE_HOLDING_REGISTER;
@@ -73,6 +81,64 @@ void init_uart() {
 }
 
 
+static const unsigned char d[] = {
+    66,66,66,66,66,66,66,66,66,66,64,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,62,66,66,66,63,52,53,
+    54,55,56,57,58,59,60,61,66,66,66,65,66,66,66, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,66,66,66,66,66,66,26,27,28,
+    29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,66,
+    66,66,66,66,66,66
+};
+
+int base64decode (char *in, size_t inLen, unsigned char *out) { 
+    char *end = in + inLen;
+    char iter = 0;
+    uint32_t buf = 0;
+    size_t len = 0;
+    
+    while (in < end) {
+        unsigned char c = d[*in++];
+        
+        switch (c) {
+        case WHITESPACE: continue;   /* skip whitespace */
+        case INVALID:    return 1;   /* invalid input, return error */
+        case EQUALS:                 /* pad character, end of data */
+            in = end;
+            continue;
+        default:
+            buf = buf << 6 | c;
+            iter++; // increment the number of iteration
+            /* If the buffer is full, split it into bytes */
+            if (iter == 4) {
+                len+=3;
+                *(out++) = (buf >> 16) & 255;
+                *(out++) = (buf >> 8) & 255;
+                *(out++) = buf & 255;
+                buf = 0; iter = 0;
+
+            }   
+        }
+    }
+   
+    if (iter == 3) {
+        len+=2;
+        *(out++) = (buf >> 10) & 255;
+        *(out++) = (buf >> 2) & 255;
+    }
+    else if (iter == 2) {
+        len++;
+        *(out++) = (buf >> 4) & 255;
+    }
+
+    szDecodedData = len;
+    return 0;
+}
+
 void sendByte(char x) {
     b = 0x20;
 
@@ -105,31 +171,17 @@ void sendString(char* s) {
   static int i;
   static int j;
 
-    #ifdef DEBUG
-      puts("  ENTER-SENDSTRING(),");
-    #endif
-
-
   j = strlen(s);
 
   for(i=0;i<j;i++) {
     sendByte(*(s+i));
   }
   sendByte(13);
-
-    #ifdef DEBUG
-      puts("  EXIT-SENDSTRING(),");
-    #endif
 }
 
 char* getString() {
   static int i;
   static char c;
-
-    #ifdef DEBUG
-      puts("  ENTER-GETSTRING(),");
-    #endif
-
 
   i = 0;
   c = 0;
@@ -143,20 +195,12 @@ char* getString() {
     }
   }
 
-    #ifdef DEBUG
-      puts("  EXIT-GETSTRING(),");
-    #endif
-
   return workBuff;
 }
 
 void printLSResponse() {
    static unsigned char c;
    static long chksum;
-
-    #ifdef DEBUG
-      puts("  ENTER-PRINTLSRESPONSE(),");
-    #endif
 
    printf("\n  ");
 
@@ -173,11 +217,6 @@ void printLSResponse() {
     }
     while(c != 13); 
     printf("\nCHKSUM: %ld\n", chksum); 
-
-
-    #ifdef DEBUG
-      puts("  EXIT-PRINTLSRESPONSE(),");
-    #endif
 }
 
 void cls() {
@@ -200,28 +239,104 @@ int startsWith (char* base, char* str) {
     return (strstr(base, str) - base) == 0;
 }
 
+
 void handleLoadCmd(char* s) {
-    #ifdef DEBUG
-      puts("  ENTER-HANDLELOADCMD(),");
-    #endif
+  static unsigned int addrToJump;
 
+  unsigned int chk;
+  unsigned int address;
+  unsigned int calcChk;
+  char c[5];
+  unsigned char temp;
 
-  sendString(s);
-  getString();
+  c[4] = 0x0;
+  
+  sendString(s);  // send the LOADCMD to server
+  getString();    // get server's response
 
-  if(strncmp(workBuff,"NO_FILE_SPECIFIED",strlen(workBuff)) == 0 ||
-     strncmp(workBuff,"FILE_NOT_CMD_FORMAT",strlen(workBuff)) == 0 ||
-     strncmp(workBuff,"UNABLE_TO_OPEN_FILE",strlen(workBuff)) == 0) {
+  if(startsWith(workBuff,"ERROR") == 1) {
       puts(workBuff);
       return;
   }
 
   while(strncmp(workBuff,"LOADCMD_DONE",strlen(workBuff)) != 0) {
-    puts(workBuff);
-    sendString("OK");
-    getString();
+    if(startsWith(workBuff,"OBJ ") == 1) {
+      //printf("  %s\n",workBuff);
+      calcChk = 0;
+      //printf("  MOVNG PAST OBJ\n");
+      memmove(workBuff, workBuff+4, strlen(workBuff));
+      c[0] = *(workBuff);
+      c[1] = *(workBuff+1);
+      c[2] = *(workBuff+2);
+      c[3] = *(workBuff+3);
+      //printf("  GETTING ADDRESS\n");
+      address = strtoul(c, NULL, 16);
+      //printf("  ADDR = %X\n", address);
+      //printf("  MOVING PAST ADDR\n");
+      memmove(workBuff, workBuff+5, strlen(workBuff));
+      c[0] = *(workBuff);
+      c[1] = *(workBuff+1);
+      c[2] = *(workBuff+2);
+      c[3] = *(workBuff+3);
+      //printf("  GETTING CHECKSM\n");
+      chk = strtoul(c, NULL, 16);
+      //printf("  CHKSUM = %d\n", chk);
+      //printf("  MOVING PAST CHECKSM\n");
+      memmove(workBuff, workBuff+5, strlen(workBuff));
+      //printf("  INVOKING BASE64DECODE\n");
+      base64decode(workBuff, strlen(workBuff), &decodedData);
+      //printf("  DECODED DATA SIZE %d\n", szDecodedData);
+      for(int i=0;i<szDecodedData;i++) {
+        temp = *(decodedData+i);
+        calcChk += temp;
+        //printf("%d ",calcChk);
+      }
+
+      //printf("\n  CALCULATED CHECKSM %d\n", calcChk);
+
+      if(calcChk == chk) {
+        // load this data into memory
+        printf(".");
+        memcpy(address, decodedData,szDecodedData);
+        sendString("OK");
+        getString();
+      }
+      else {
+        printf("  CHK MISMATCH: %d != %d\n",chk, calcChk);
+        sendString("RESEND");
+        getString();
+      }
+    } 
+    else if(startsWith(workBuff,"ENTPT ") == 1) {
+      memmove(workBuff, workBuff+6, strlen(workBuff));
+      c[0] = *(workBuff);
+      c[1] = *(workBuff+1);
+      c[2] = *(workBuff+2);
+      c[3] = *(workBuff+3);
+      address = strtoul(c, NULL, 16);
+      sendString("OK");
+      getString();
+      printf("PROGRAM ENTRY POINT: %ud\n", address);
+      printf("ENTER 'G' TO JUMP TO ENTRY POINT, OR 'C' TO CANCEL\n");
+      fgets(workBuff,255,stdin);
+      if(startsWith(workBuff,"G") == 1) {
+          addrToJump = address;  // sets HL
+          #pragma asm
+            jp    (hl)
+          #pragma endasm
+      }
+      else {
+        break;
+      }
+    }
+    else {
+      printf("UNKNOWN MESSAGE FROM SERVER, %s\n", workBuff);
+        sendString("OK");
+        getString();
+    }
   }
 
+    printf("\n");
     #ifdef DEBUG
       puts("  EXIT-HANDLELOADCMD(),");
     #endif
@@ -244,6 +359,7 @@ int main()
 
   cls();
 
+  printf("TRS-80 MODEL 1 UART OS VYYYY-MM-DD-HH-MM-SS\n\n");
   printf("INITIALIZING UART...\n");
   init_uart();
 
@@ -254,7 +370,7 @@ int main()
     if ((strlen(buf) > 0) && (buf[strlen (buf) - 1] == '\n'))
             buf[strlen (buf) - 1] = '\0';
 
-    if(strncmp(buf,"X",strlen(buf)) == 0) {
+    if(strncmp(buf,"X",strlen(buf)) == 0 || strncmp(buf,"QUIT",strlen(buf)) == 0) {
       break;
     }
     else if (startsWith(buf,"LOADCMD") == 1) {

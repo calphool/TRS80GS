@@ -10,6 +10,7 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <ctype.h>
+#include <glob.h>
 
 
 #define RETURNCODE int
@@ -249,23 +250,29 @@ void lsResponse(char* s) {
     struct dirent **namelist;
     int n;
 
-    //TODO:  add glob handling for LS command
-
     chksum = 0;
     byteCtr = 0;
-    dp = opendir(".");
     time(&now);
 
-    if(dp != NULL) {
-    	while((ep = readdir(dp)) != NULL) {
-    		strcpy(buf,ep->d_name);
-    		String_Upper(buf);
-    		if(*(buf) != '.') {
-                sendString(buf);
-	            sendByte(':');
-        	}
-        }
+    char *token = strtok(s, " "); // command itself
+    
+    token = strtok(NULL, " "); // wildcard path sent
+    if(token == NULL) {
+        strcpy(buf,"*");
+        token = buf;
     }
+
+    glob_t globbuf;
+    if(glob(token, 0, NULL, &globbuf) == 0)
+    {
+      int i;
+      for(i = 0; i < globbuf.gl_pathc; i++)
+        strcpy(buf,globbuf.gl_pathv[i]);
+        String_Upper(buf);
+        sendString(buf);
+        sendByte(':');
+    }
+    globfree(&globbuf);
 
     sendByte(13);
 
@@ -468,35 +475,51 @@ void handleLoadCommand(char* s) {
     char tempbuff[512];
     char responseBuff[2048];
     char blocktype;
+    unsigned char b;
     int len;
-    unsigned int cksum;
+    unsigned long cksum;
+    unsigned long bytesRead;
     unsigned short address;
+    float f;
     char *token = strtok(s, " "); // command itself
     
     token = strtok(NULL, " "); // file name
     if(token == NULL) {
-        sendResponse("NO_FILE_SPECIFIED");
+        sendResponse("ERROR_NO_FILE_SPECIFIED");
         return;
     }
 
     if(EndsWith(token,".CMD") == 0) {
-        sendResponse("FILE_NOT_CMD_FORMAT");
+        sendResponse("ERROR_FILE_NOT_CMD_FORMAT");
         return;
     }
 
     fp = fopen(token, "rb");
     if(fp == NULL) {
-        sendResponse("UNABLE_TO_OPEN_FILE");
+        sendResponse("ERROR_UNABLE_TO_OPEN_FILE");
         return;
     }
+    bytesRead = 0;
+
+    fseek(fp, 0L, SEEK_END);
+    long szFile = ftell(fp);
+    rewind(fp);
 
     for(;;) {
         if(!fread(tempbuff,1,1,fp)) // EOF
             break;
 
+        bytesRead++;
+
         blocktype = *(tempbuff);
+        if(blocktype == 0x0) {
+            // ignore blocktype 0x00
+        }
+        else
         if(blocktype == 0x01) {
              fread(tempbuff,1,1,fp);
+             bytesRead++;
+
              len=*(tempbuff+0);
              //printf("len read: %d\n",len);
              if(len<3) // compensate for special values 0,1, and 2.
@@ -504,42 +527,55 @@ void handleLoadCommand(char* s) {
              //printf("adjusted len: %d\n",len);
 
              fread(&address,1,2,fp); // read 16-bit load-address
+             bytesRead+=2;
+
              len=len-2;
-             printf("Reading Object block, addr 0x%x, length = %d.\n",address,len);
+             f = bytesRead / szFile; 
+             printf("Reading Object block, addr 0x%x, length = %d (%d percent complete)\n",address,len, (int)(f*100.0));
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
-             cksum = 0;
-             for(long i=0;i<len;i++) {
-                cksum+=*(tempbuff+i);
-             }
-             //printf("  checksum: %d\n", cksum);
+             bytesRead+=len;
 
-             //printf("  base64 ptr0: %p\n", base64Buff);
+
+             cksum = 0;
+             for(int i=0;i<len;i++) {
+                b = *(tempbuff+i);
+                cksum+=b;
+                //printf("  %ld ",cksum);
+             }
+             //printf("\n  cksum=%ld\n", cksum);
+             f = bytesRead / szFile; 
 
              base64Buff = base64Encode(tempbuff, len, base64Buff);
-             //printf("  base64 buffer size: %zu\n",szBuf);
-
-             //printf("  base64 ptr1: %p\n", base64Buff);
-
-             //for(int i=0;i<szBuf;i++) {
-             //   putchar(*(base64Buff+i));
-             //}
-             //printf("\n");
-             //printf("  base64 : %s\n", base64Buff);
-             sprintf(responseBuff,"OBJ %X %s %X", address, base64Buff, cksum);
-             //printf("  %s\n",responseBuff);
-             sendResponse(responseBuff);
+             sprintf(responseBuff,"OBJ %X %lX %s", address, cksum, base64Buff);
+             //printf("  %s\n", responseBuff);
              free(base64Buff);
-             getCommand();
+             int iResendCtr = 0;
+             do {
+                 sendResponse(responseBuff);
+                 getCommand();
+                 iResendCtr++;
+             }
+             while(stricmp(workbuff, "RESEND", strlen(workbuff)) == 0 && iResendCtr < 5);
+             if(iResendCtr >= 5) {
+                printf("  too many resends.  Forcing stop.\n");
+                break;
+             }
+
              if(stricmp(workbuff, "OK", strlen(workbuff)) != 0) {
-                printf("  problem sending object block: %s\n", workbuff);
+                printf("  problem sending object block: %s, continuing loop.\n", workbuff);
              }
         }
         else if(blocktype == 0x02) {
              fread(tempbuff,1,1,fp);
+             bytesRead++;
+
              len=*tempbuff;
-             printf("Reading Transfer Address, block length = %u.\n",len);
+             f = bytesRead / szFile; 
+             printf("Reading Transfer Address, block length = %u, (%d percent complete).\n",len, (int)(f*100.0));
              fread(&address,1,len,fp);
+             bytesRead+=len;
+
              printf("   Entry point is 0x%x (%d)\n",address,address);
              sprintf(responseBuff,"ENTPT %X",address);
              sendResponse(responseBuff);
@@ -550,17 +586,26 @@ void handleLoadCommand(char* s) {
         }
         else if(blocktype == 0x05) {
              fread(tempbuff,1,1,fp);
+             bytesRead++;
+
              len=*tempbuff;
-             printf("Reading Load Module Header, block length = %u.\n",len);
+             f = bytesRead / szFile; 
+             printf("Reading Load Module Header, block length = %u (%d percent complete).\n",len,(int)(f*100.0));
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+
              printf("    %s\n",tempbuff);
         }
         else {
              fread(tempbuff,1,1,fp);
+             bytesRead++;
+
              len=*tempbuff;
-             printf("Unknown block type 0x%x, length = %u.\n",blocktype,len);
+             f = bytesRead / szFile; 
+             printf("Unknown block type 0x%x, length = %u (%d percent complete).\n",blocktype,len, (int)(f*100.0));
              fread(tempbuff,1,len,fp);
+             bytesRead+=len;
         }
     }
     
