@@ -480,7 +480,7 @@ void handleLoadCommand(char* s) {
     unsigned long cksum;
     unsigned long bytesRead;
     unsigned short address;
-    float f;
+    double f;
     char *token = strtok(s, " "); // command itself
     
     token = strtok(NULL, " "); // file name
@@ -530,8 +530,8 @@ void handleLoadCommand(char* s) {
              bytesRead+=2;
 
              len=len-2;
-             f = bytesRead / szFile; 
-             printf("Reading Object block, addr 0x%x, length = %d (%d percent complete)\n",address,len, (int)(f*100.0));
+             f = (double)bytesRead * (double)100.0 / (double)szFile; 
+             printf("Reading Object block, addr 0x%x, length = %d (%d percent complete)\n",address,len, (int)f);
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
@@ -544,10 +544,9 @@ void handleLoadCommand(char* s) {
                 //printf("  %ld ",cksum);
              }
              //printf("\n  cksum=%ld\n", cksum);
-             f = bytesRead / szFile; 
 
              base64Buff = base64Encode(tempbuff, len, base64Buff);
-             sprintf(responseBuff,"OBJ %X %lX %s", address, cksum, base64Buff);
+             sprintf(responseBuff,"OBJ %04X %04lX %s", address, cksum, base64Buff);
              //printf("  %s\n", responseBuff);
              free(base64Buff);
              int iResendCtr = 0;
@@ -571,8 +570,8 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*tempbuff;
-             f = bytesRead / szFile; 
-             printf("Reading Transfer Address, block length = %u, (%d percent complete).\n",len, (int)(f*100.0));
+             f = (double)bytesRead * (double)100.0 / (double)szFile; 
+             printf("Reading Transfer Address, block length = %u, (%d percent complete).\n",len, (int)f);
              fread(&address,1,len,fp);
              bytesRead+=len;
 
@@ -584,26 +583,158 @@ void handleLoadCommand(char* s) {
                 printf("  problem sending transfer address: %s\n", workbuff);
              }
         }
+        else if(blocktype == 0x03) {
+             printf("Read End Of File Mark -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0) 
+                len = 256; 
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x04) {
+             printf("Read End of ISAM mark -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
         else if(blocktype == 0x05) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
              len=*tempbuff;
-             f = bytesRead / szFile; 
-             printf("Reading Load Module Header, block length = %u (%d percent complete).\n",len,(int)(f*100.0));
+             if(len == 0 ) 
+                len = 256;
+
+             f = (double)bytesRead * (double)100.0 / (double)szFile; 
+             printf("Reading Load Module Header, block length = %u (%d percent complete).\n",len,(int)f);
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
 
              printf("    %s\n",tempbuff);
         }
+        else if(blocktype == 0x06) {
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*tempbuff;
+             if(len == 0 ) 
+                len = 256;
+
+             f = (double)bytesRead * (double)100.0 / (double)szFile; 
+             printf("Reading PDS Header, block length = %u (%d percent complete).\n",len,(int)f);
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+
+             //printf("    %s\n",tempbuff);
+        }
+        else if(blocktype == 0x07) {
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*tempbuff;
+             if(len == 0 ) 
+                len = 256;
+
+             f = (double)bytesRead * (double)100.0 / (double)szFile; 
+             printf("Reading Patch Name Header, block length = %u (%d percent complete).\n",len,(int)f);
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+
+             //printf("    %s\n",tempbuff);
+        }
+        else if(blocktype == 0x08) {
+             printf("Read ISAM directory entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x0a) {
+             printf("Read End of ISAM directory entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x0c) {
+             printf("Read PDS directory entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x0e) {
+             printf("Read End of PDS directory entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x10) {
+             printf("Read Yanked Load Block entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
+        else if(blocktype == 0x1f) {
+             printf("Read Copyright Block entry -- skipping.\n");
+             fread(tempbuff,1,1,fp);
+             bytesRead++;
+
+             len=*(tempbuff+0);
+             if(len == 0 ) 
+                len = 256;
+             memset(tempbuff, 0x0, sizeof(tempbuff));
+             fread(tempbuff,1,len,fp);
+             bytesRead+=len;
+        }
         else {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
              len=*tempbuff;
-             f = bytesRead / szFile; 
-             printf("Unknown block type 0x%x, length = %u (%d percent complete).\n",blocktype,len, (int)(f*100.0));
+             f = (double)bytesRead * (double)100.0 / (double)szFile;  
+             printf("Unknown block type 0x%x, length = %u (%d percent complete).\n",blocktype,len, (int)f);
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
         }

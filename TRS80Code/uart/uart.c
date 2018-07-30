@@ -14,7 +14,8 @@
 unsigned char control_reg;
 unsigned char b;
 unsigned char workBuff[400];
-unsigned char decodedData[300];
+#define OUTLEN 300
+unsigned char decodedData[OUTLEN];
 unsigned int szDecodedData;
 
 
@@ -100,10 +101,11 @@ int base64decode (char *in, size_t inLen, unsigned char *out) {
     char iter = 0;
     uint32_t buf = 0;
     size_t len = 0;
+    //printf("  BASE64DECODE(*,%u,*) ",inLen);
     
     while (in < end) {
         unsigned char c = d[*in++];
-        
+        //printf(" %u",(unsigned char)c);
         switch (c) {
         case WHITESPACE: continue;   /* skip whitespace */
         case INVALID:    return 1;   /* invalid input, return error */
@@ -124,16 +126,17 @@ int base64decode (char *in, size_t inLen, unsigned char *out) {
             }   
         }
     }
-   
     if (iter == 3) {
-        len+=2;
+        if ((len += 2) > OUTLEN) return 1;
         *(out++) = (buf >> 10) & 255;
         *(out++) = (buf >> 2) & 255;
     }
     else if (iter == 2) {
-        len++;
+        if (++len > OUTLEN) return 1;
         *(out++) = (buf >> 4) & 255;
     }
+
+    //printf(" (ITER=%d,LEN=%d)\n",iter,len);
 
     szDecodedData = len;
     return 0;
@@ -146,6 +149,7 @@ void sendByte(char x) {
         #pragma asm
         nop
         #pragma endasm
+        //printf("%d ", UART_LINE_STATUS_REGISTER);
     }
     while((UART_LINE_STATUS_REGISTER & b) == 0);
     
@@ -159,7 +163,6 @@ unsigned char getByte() {
         #pragma asm
         nop
         #pragma endasm
-        //printf("%d (%d) ",UART_LINE_STATUS_REGISTER & b, UART_LINE_STATUS_REGISTER);
     }
     while((UART_LINE_STATUS_REGISTER & b) == 0);
 
@@ -171,6 +174,7 @@ void sendString(char* s) {
   static int i;
   static int j;
 
+  //printf("IN SENDSTRING: %s\n", s);
   j = strlen(s);
 
   for(i=0;i<j;i++) {
@@ -185,6 +189,7 @@ char* getString() {
 
   i = 0;
   c = 0;
+  //printf("IN GETSTRING\n");
 
   while(c != 13) {
     c = getByte();
@@ -245,11 +250,13 @@ void handleLoadCmd(char* s) {
 
   unsigned int chk;
   unsigned int address;
-  unsigned int calcChk;
+  unsigned long calcChk;
   char c[5];
   unsigned char temp;
 
   c[4] = 0x0;
+
+  printf("in HANDLELOADCMD: %s",s);
   
   sendString(s);  // send the LOADCMD to server
   getString();    // get server's response
@@ -262,7 +269,6 @@ void handleLoadCmd(char* s) {
   while(strncmp(workBuff,"LOADCMD_DONE",strlen(workBuff)) != 0) {
     if(startsWith(workBuff,"OBJ ") == 1) {
       //printf("  %s\n",workBuff);
-      calcChk = 0;
       //printf("  MOVNG PAST OBJ\n");
       memmove(workBuff, workBuff+4, strlen(workBuff));
       c[0] = *(workBuff);
@@ -284,19 +290,23 @@ void handleLoadCmd(char* s) {
       //printf("  MOVING PAST CHECKSM\n");
       memmove(workBuff, workBuff+5, strlen(workBuff));
       //printf("  INVOKING BASE64DECODE\n");
-      base64decode(workBuff, strlen(workBuff), &decodedData);
+      if(base64decode(workBuff, strlen(workBuff), &decodedData) != 0) {
+        printf("Problem with base64decode!\n");
+      }
       //printf("  DECODED DATA SIZE %d\n", szDecodedData);
+      calcChk = 0;
       for(int i=0;i<szDecodedData;i++) {
         temp = *(decodedData+i);
-        calcChk += temp;
-        //printf("%d ",calcChk);
+        calcChk = calcChk + (unsigned long)temp;
+        //if(szDecodedData < 50)
+          //printf("(%d) %ld ",temp, calcChk);
       }
 
       //printf("\n  CALCULATED CHECKSM %d\n", calcChk);
 
       if(calcChk == chk) {
         // load this data into memory
-        printf(".");
+        printf("%c",191);
         memcpy(address, decodedData,szDecodedData);
         sendString("OK");
         getString();
@@ -316,7 +326,7 @@ void handleLoadCmd(char* s) {
       address = strtoul(c, NULL, 16);
       sendString("OK");
       getString();
-      printf("PROGRAM ENTRY POINT: %ud\n", address);
+      printf("\nPROGRAM ENTRY POINT: %ud\n", address);
       printf("ENTER 'G' TO JUMP TO ENTRY POINT, OR 'C' TO CANCEL\n");
       fgets(workBuff,255,stdin);
       if(startsWith(workBuff,"G") == 1) {
@@ -392,6 +402,11 @@ int main()
   }
 
   printf("DONE.\n");
+
+  #pragma asm
+    jp    0
+  #pragma endasm
+
 
   exit(-1);
 }
