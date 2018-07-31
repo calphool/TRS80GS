@@ -24,13 +24,13 @@ __sfr __at 0xe0 UART_TRANSMIT_HOLDING_REGISTER;
 __sfr __at 0xe0 UART_DIVISOR_LSB;
 __sfr __at 0xe1 UART_DIVISOR_MSB;
 __sfr __at 0xe1 UART_INTERRUPT_ENABLE_REGISTER;
-__sfr __at 0xe2 UART_INTERRUPT_STATUS_REGISTER;
+//__sfr __at 0xe2 UART_INTERRUPT_STATUS_REGISTER;
 __sfr __at 0xe2 UART_FIFO_CONTROL_REGISTER;
 __sfr __at 0xe3 UART_LINE_CONTROL_REGISTER;
 __sfr __at 0xe4 UART_MODEM_CONTROL_REGISTER;
 __sfr __at 0xe5 UART_LINE_STATUS_REGISTER;
-__sfr __at 0xe6 UART_MODEM_STATUS_REGISTER;
-__sfr __at 0xe7 UART_SCRATCH_PAD_REGISTER;
+//__sfr __at 0xe6 UART_MODEM_STATUS_REGISTER;
+//__sfr __at 0xe7 UART_SCRATCH_PAD_REGISTER;
 
 
 
@@ -246,7 +246,7 @@ int startsWith (char* base, char* str) {
 
 
 void handleLoadCmd(char* s) {
-  static unsigned int addrToJump;
+ static unsigned int addrToJump;
 
   unsigned int chk;
   unsigned int address;
@@ -256,7 +256,7 @@ void handleLoadCmd(char* s) {
 
   c[4] = 0x0;
 
-  printf("in HANDLELOADCMD: %s",s);
+  //printf("in HANDLELOADCMD: %s",s);
   
   sendString(s);  // send the LOADCMD to server
   getString();    // get server's response
@@ -327,7 +327,7 @@ void handleLoadCmd(char* s) {
       sendString("OK");
       getString();
       printf("\nPROGRAM ENTRY POINT: %ud\n", address);
-      printf("ENTER 'G' TO JUMP TO ENTRY POINT, OR 'C' TO CANCEL\n");
+      printf("ENTER 'G' TO RUN AT ENTRY POINT, OR 'C' TO CANCEL\n");
       fgets(workBuff,255,stdin);
       if(startsWith(workBuff,"G") == 1) {
           addrToJump = address;  // sets HL
@@ -365,22 +365,24 @@ void sendCommandAndDumpResult(char* s) {
 
 int main()
 {
-  char buf[255];
+  char buf[128];
+  int szBuf;
 
   cls();
 
-  printf("TRS-80 MODEL 1 UART OS VYYYY-MM-DD-HH-MM-SS\n\n");
-  printf("INITIALIZING UART...\n");
+  puts("TRS-80 MODEL 1 UART OS VYYYY-MM-DD-HH-MM-SS");
+  puts("===========================================");
   init_uart();
 
-  printf("\nCOMMAND?");
+  fputs("\nCOMMAND?",stdout);
   while(strncmp(buf,"X",strlen(buf)) != 0) {
-    printf("\n>");
-    fgets(buf,255,stdin);
-    if ((strlen(buf) > 0) && (buf[strlen (buf) - 1] == '\n'))
-            buf[strlen (buf) - 1] = '\0';
+    fputs("\n>",stdout);
+    fgets(buf,128,stdin);
+    szBuf = strlen(buf);
+    if (szBuf > 0 && buf[szBuf - 1] == '\n')
+            buf[szBuf - 1] = '\0';
 
-    if(strncmp(buf,"X",strlen(buf)) == 0 || strncmp(buf,"QUIT",strlen(buf)) == 0) {
+    if(strncmp(buf,"X",szBuf) == 0 || strncmp(buf,"QUIT",szBuf) == 0) {
       break;
     }
     else if (startsWith(buf,"LOADCMD") == 1) {
@@ -398,7 +400,6 @@ int main()
     else {
       printf("UNKNOWN COMMAND: %s\n",buf);
     }
-
   }
 
   printf("DONE.\n");

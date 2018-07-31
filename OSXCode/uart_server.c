@@ -108,7 +108,18 @@ void String_Upper(char string[])
       	i++;
 	}
 }
-
+void String_Lower(char string[]) 
+{
+    int i = 0;
+ 
+    while (string[i] != '\0') 
+    {
+        if (string[i] >= 'A' && string[i] <= 'Z') {
+            string[i] = string[i] + 32;
+        }
+        i++;
+    }
+}
 
 bool startsWith(const char *pre, const char *str)
 {
@@ -262,17 +273,26 @@ void lsResponse(char* s) {
         token = buf;
     }
 
+    sprintf(workbuff,"%s",token);
+    String_Lower(workbuff);
+  
+
     glob_t globbuf;
-    if(glob(token, 0, NULL, &globbuf) == 0)
+    int r1, r2;
+    r1 = glob(token, 0, NULL, &globbuf);
+    r2 = glob(workbuff, GLOB_APPEND, NULL, &globbuf);
+    if(r1 == 0 || r2 == 0)
     {
       int i;
-      for(i = 0; i < globbuf.gl_pathc; i++)
-        strcpy(buf,globbuf.gl_pathv[i]);
-        String_Upper(buf);
-        sendString(buf);
-        sendByte(':');
+      printf("%zu matching file entries...", globbuf.gl_pathc);
+      for(i = 0; i < globbuf.gl_pathc; i++) {
+            strcpy(buf,globbuf.gl_pathv[i]);
+            String_Upper(buf);
+            sendString(buf);
+            sendByte(':');
+        }
+        globfree(&globbuf);
     }
-    globfree(&globbuf);
 
     sendByte(13);
 
@@ -360,6 +380,8 @@ void handleSetDelay(char* s) {
     }
 
     int val = atoi(token);
+    
+
     if(val == 0) {
         sendResponse("BAD_NUMERIC_VALUE");
         return;
@@ -521,6 +543,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              //printf("len read: %d\n",len);
              if(len<3) // compensate for special values 0,1, and 2.
                 len+=256;
@@ -569,7 +592,8 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*tempbuff;
+             len=*(tempbuff+1);
+             len = len & 0x000000ff;
              f = (double)bytesRead * (double)100.0 / (double)szFile; 
              printf("Reading Transfer Address, block length = %u, (%d percent complete).\n",len, (int)f);
              fread(&address,1,len,fp);
@@ -589,6 +613,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0) 
                 len = 256; 
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -601,6 +626,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -611,12 +637,15 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*tempbuff;
+             len=*(tempbuff+0);
+             len = len & 0x000000ff;
+             printf("%X\n",len);
+
              if(len == 0 ) 
                 len = 256;
 
              f = (double)bytesRead * (double)100.0 / (double)szFile; 
-             printf("Reading Load Module Header, block length = %u (%d percent complete).\n",len,(int)f);
+             printf("Reading Load Module Header, block length = %d (%d percent complete).\n",len,(int)f);
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
@@ -627,23 +656,25 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*tempbuff;
+             len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
 
              f = (double)bytesRead * (double)100.0 / (double)szFile; 
-             printf("Reading PDS Header, block length = %u (%d percent complete).\n",len,(int)f);
+             printf("Reading PDS Header, block length = %d (%d percent complete).\n",len,(int)f);
              memset(tempbuff, 0x0, sizeof(tempbuff));
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
 
-             //printf("    %s\n",tempbuff);
+             printf("    %s\n",tempbuff);
         }
         else if(blocktype == 0x07) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*tempbuff;
+             len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
 
@@ -661,6 +692,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
 
              if(len == 0 ) 
                 len = 256;
@@ -674,6 +706,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -686,6 +719,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -698,6 +732,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -710,6 +745,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -722,6 +758,7 @@ void handleLoadCommand(char* s) {
              bytesRead++;
 
              len=*(tempbuff+0);
+             len = len & 0x000000ff;
              if(len == 0 ) 
                 len = 256;
              memset(tempbuff, 0x0, sizeof(tempbuff));
@@ -732,7 +769,8 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*tempbuff;
+             len=*(tempbuff+0);
+             len = len & 0x000000ff;
              f = (double)bytesRead * (double)100.0 / (double)szFile;  
              printf("Unknown block type 0x%x, length = %u (%d percent complete).\n",blocktype,len, (int)f);
              fread(tempbuff,1,len,fp);
