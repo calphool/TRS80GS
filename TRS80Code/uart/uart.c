@@ -12,11 +12,12 @@
 
 
 unsigned char control_reg;
-unsigned char b;
+unsigned char byt;
 unsigned char workBuff[400];
 #define OUTLEN 300
 unsigned char decodedData[OUTLEN];
 unsigned int szDecodedData;
+unsigned int timeout;
 
 
 __sfr __at 0xe0 UART_RECEIVE_HOLDING_REGISTER;
@@ -31,8 +32,21 @@ __sfr __at 0xe4 UART_MODEM_CONTROL_REGISTER;
 __sfr __at 0xe5 UART_LINE_STATUS_REGISTER;
 //__sfr __at 0xe6 UART_MODEM_STATUS_REGISTER;
 //__sfr __at 0xe7 UART_SCRATCH_PAD_REGISTER;
+__sfr __at 0x82 PORTX82;
+__sfr __at 0x83 PORTX83;
 
 
+
+void audioSilence() {
+  PORTX82 = 255;
+  PORTX82 = 253;
+  PORTX82 = 251;
+  PORTX82 = 249;
+  PORTX83 = 255;
+  PORTX83 = 253;
+  PORTX83 = 251;
+  PORTX83 = 249;
+}
 
 /*
 void hold(unsigned int x) {
@@ -143,7 +157,7 @@ int base64decode (char *in, size_t inLen, unsigned char *out) {
 }
 
 void sendByte(char x) {
-    b = 0x20;
+    byt = 0x20;
 
     do {
         #pragma asm
@@ -151,20 +165,19 @@ void sendByte(char x) {
         #pragma endasm
         //printf("%d ", UART_LINE_STATUS_REGISTER);
     }
-    while((UART_LINE_STATUS_REGISTER & b) == 0);
+    while((UART_LINE_STATUS_REGISTER & byt) == 0);
     
     UART_TRANSMIT_HOLDING_REGISTER = x;
 }
 
 unsigned char getByte() {
-    b = 0x01;
+    byt = 0x01;
+    timeout = 65534;
 
     do {
-        #pragma asm
-        nop
-        #pragma endasm
+      timeout--;
     }
-    while((UART_LINE_STATUS_REGISTER & b) == 0);
+    while((UART_LINE_STATUS_REGISTER & byt) == 0 && timeout > 0);
 
     return UART_RECEIVE_HOLDING_REGISTER;
 }
@@ -189,10 +202,13 @@ char* getString() {
 
   i = 0;
   c = 0;
-  //printf("IN GETSTRING\n");
+  timeout = 65534;
 
   while(c != 13) {
     c = getByte();
+    if(timeout == 0)
+      return NULL;
+
     if(c != 13 && c != 10) {
       workBuff[i] = c;
       workBuff[i+1] = 0x0;
@@ -224,20 +240,44 @@ void printLSResponse() {
     printf("\nCHKSUM: %ld\n", chksum); 
 }
 
-void cls() {
+
+void drawChar(unsigned long offset, unsigned long count, unsigned char cc) {
+  static unsigned long of;
+  static unsigned long cnt;
+  static unsigned char ccs;
+  of = offset;
+  cnt = count;
+  ccs = cc;
+  
   #pragma asm
-        push HL
-        push DE
-        push BC
-        ld     HL,0x3C00       
-        ld     DE,0x3C01      
-        ld     BC,0x3FF         
-        ld     (HL),128 
-        ldir         
-        pop BC
-        pop DE
-        pop HL
-  #pragma endasm
+        push   HL
+        push   DE
+        push   BC
+        push   AF
+        ld     HL,(_st_drawChar_of)       
+        ld     DE,(_st_drawChar_of)
+        INC    DE      
+        ld     BC,(_st_drawChar_cnt)
+        ld     a,(_st_drawChar_ccs)
+        ld     (HL),a
+        ldir 
+        pop    AF
+        pop    BC
+        pop    DE
+        pop    HL        
+  #pragma endasm 
+}
+
+void cls() {
+  drawChar((unsigned long)0x3c00, (unsigned long)0x3ff, (unsigned char)128);
+}
+
+void drawProgress(unsigned int xBytes) {
+  drawChar((unsigned long)0x3f80, (unsigned long)64, (unsigned char)128);
+
+  if(xBytes > 0) {
+    drawChar((unsigned long)0x3f80, (unsigned long)xBytes, (unsigned char)153);
+  }
 }
 
 int startsWith (char* base, char* str) {
@@ -249,24 +289,35 @@ void handleLoadCmd(char* s) {
  static unsigned int addrToJump;
 
   unsigned int chk;
+  unsigned int bytePerc;
   unsigned int address;
+  unsigned int bytePercentage;
   unsigned long calcChk;
   char c[5];
   unsigned char temp;
+  unsigned char blkCtr;
 
   c[4] = 0x0;
 
   //printf("in HANDLELOADCMD: %s",s);
   
+
+  blkCtr = 0;
+
   sendString(s);  // send the LOADCMD to server
-  getString();    // get server's response
+  if(getString() == NULL) {    // get server's response
+    printf("\nTIMEOUT.");
+    return;
+  }
 
   if(startsWith(workBuff,"ERROR") == 1) {
       puts(workBuff);
       return;
   }
 
-  while(strncmp(workBuff,"LOADCMD_DONE",strlen(workBuff)) != 0) {
+  while(strncmp(workBuff,"GET_DONE",strlen(workBuff)) != 0) {
+    //printf("%s\n", workBuff);
+    blkCtr++;
     if(startsWith(workBuff,"OBJ ") == 1) {
       //printf("  %s\n",workBuff);
       //printf("  MOVNG PAST OBJ\n");
@@ -280,6 +331,15 @@ void handleLoadCmd(char* s) {
       //printf("  ADDR = %X\n", address);
       //printf("  MOVING PAST ADDR\n");
       memmove(workBuff, workBuff+5, strlen(workBuff));
+
+      c[0] = *(workBuff);
+      c[1] = *(workBuff+1);
+      c[2] = *(workBuff+2);
+      c[3] = *(workBuff+3);
+      bytePercentage = strtoul(c, NULL, 16);
+      memmove(workBuff, workBuff+5, strlen(workBuff));
+
+
       c[0] = *(workBuff);
       c[1] = *(workBuff+1);
       c[2] = *(workBuff+2);
@@ -290,6 +350,7 @@ void handleLoadCmd(char* s) {
       //printf("  MOVING PAST CHECKSM\n");
       memmove(workBuff, workBuff+5, strlen(workBuff));
       //printf("  INVOKING BASE64DECODE\n");
+
       if(base64decode(workBuff, strlen(workBuff), &decodedData) != 0) {
         printf("Problem with base64decode!\n");
       }
@@ -305,16 +366,21 @@ void handleLoadCmd(char* s) {
       //printf("\n  CALCULATED CHECKSM %d\n", calcChk);
 
       if(calcChk == chk) {
-        // load this data into memory
-        printf("%c",191);
+        drawProgress(bytePercentage);
         memcpy(address, decodedData,szDecodedData);
         sendString("OK");
-        getString();
+        if(getString() == NULL) {
+          printf("\nTIMEOUT.");
+          return;
+        }
       }
       else {
         printf("  CHK MISMATCH: %d != %d\n",chk, calcChk);
         sendString("RESEND");
-        getString();
+        if(getString() == NULL) {
+          printf("\nTIMEOUT.");
+          return;
+        }
       }
     } 
     else if(startsWith(workBuff,"ENTPT ") == 1) {
@@ -325,7 +391,11 @@ void handleLoadCmd(char* s) {
       c[3] = *(workBuff+3);
       address = strtoul(c, NULL, 16);
       sendString("OK");
-      getString();
+      if(getString() == NULL) {
+          printf("\nTIMEOUT.");
+          return;
+      }
+
       printf("\nPROGRAM ENTRY POINT: %ud\n", address);
       printf("ENTER 'G' TO RUN AT ENTRY POINT, OR 'C' TO CANCEL\n");
       fgets(workBuff,255,stdin);
@@ -340,9 +410,12 @@ void handleLoadCmd(char* s) {
       }
     }
     else {
-      printf("UNKNOWN MESSAGE FROM SERVER, %s\n", workBuff);
+      printf("UNKNOWN MSG FROM SERVER, %s\n", workBuff);
         sendString("OK");
-        getString();
+        if(getString() == NULL) {
+          printf("\nTIMEOUT.");
+          return;
+        }
     }
   }
 
@@ -369,9 +442,11 @@ int main()
   int szBuf;
 
   cls();
+  audioSilence();
+  puts("          TRS-80 MODEL 1 UART OS VYYYY-MM-DD-HH-MM-SS");
+  for(szBuf=0;szBuf<63;szBuf++)
+    fputc(131,stdout);
 
-  puts("TRS-80 MODEL 1 UART OS VYYYY-MM-DD-HH-MM-SS");
-  puts("===========================================");
   init_uart();
 
   fputs("\nCOMMAND?",stdout);
@@ -382,32 +457,29 @@ int main()
     if (szBuf > 0 && buf[szBuf - 1] == '\n')
             buf[szBuf - 1] = '\0';
 
-    if(strncmp(buf,"X",szBuf) == 0 || strncmp(buf,"QUIT",szBuf) == 0) {
+    if(strncmp(buf,"X",szBuf) == 0 || strncmp(buf,"Q",szBuf) == 0) {
       break;
     }
-    else if (startsWith(buf,"LOADCMD") == 1) {
+    else if (startsWith(buf,"GET") == 1) {
       handleLoadCmd(buf);
     }
     else if(startsWith(buf,"LS") == 1) {
       sendCommandAndDumpResult(buf);
     }
-    else if(startsWith(buf,"KILL") == 1) {
-      sendCommandAndDumpResult(buf);  
-    }
     else if(startsWith(buf,"SETDELAY") == 1) {
       sendCommandAndDumpResult(buf);
     }
     else {
-      printf("UNKNOWN COMMAND: %s\n",buf);
+      printf("UNKNOWN CMD: %s\n",buf);
     }
   }
 
-  printf("DONE.\n");
+  printf("DONE. PRESS ENTER.\n");
+  fgets(buf,128,stdin);
 
   #pragma asm
     jp    0
   #pragma endasm
-
 
   exit(-1);
 }

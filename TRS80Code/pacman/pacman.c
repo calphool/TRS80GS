@@ -960,7 +960,7 @@ int main()
    printf("(              CKSUM               )\n");
    printf("'---------------------------------------'\n\n");
    printf("THIS PROGRAM REQUIRES THE TRS-80 GRAPHICS ");
-   printf("AND SOUND CARD V2.0.\n\n");
+   printf("AND SOUND CARD V2.0+.\n\n");
 
    printf("1...");
    audioSilence();

@@ -500,8 +500,9 @@ void handleLoadCommand(char* s) {
     unsigned char b;
     int len;
     unsigned long cksum;
-    unsigned long bytesRead;
+    unsigned long bytesRead; 
     unsigned short address;
+    unsigned long bytePercentage;
     double f;
     char *token = strtok(s, " "); // command itself
     
@@ -569,7 +570,14 @@ void handleLoadCommand(char* s) {
              //printf("\n  cksum=%ld\n", cksum);
 
              base64Buff = base64Encode(tempbuff, len, base64Buff);
-             sprintf(responseBuff,"OBJ %04X %04lX %s", address, cksum, base64Buff);
+
+             f = f / 100;
+             f = f * 64;
+             bytePercentage = (int)f;
+             if(bytePercentage == 0)
+                 bytePercentage = 1;
+
+             sprintf(responseBuff,"OBJ %04X %04lX %04lX %s", address, bytePercentage, cksum, base64Buff);
              //printf("  %s\n", responseBuff);
              free(base64Buff);
              int iResendCtr = 0;
@@ -592,7 +600,7 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,1,fp);
              bytesRead++;
 
-             len=*(tempbuff+1);
+             len=*(tempbuff+0);
              len = len & 0x000000ff;
              f = (double)bytesRead * (double)100.0 / (double)szFile; 
              printf("Reading Transfer Address, block length = %u, (%d percent complete).\n",len, (int)f);
@@ -639,7 +647,7 @@ void handleLoadCommand(char* s) {
 
              len=*(tempbuff+0);
              len = len & 0x000000ff;
-             printf("%X\n",len);
+             //printf("%X\n",len);
 
              if(len == 0 ) 
                 len = 256;
@@ -667,7 +675,7 @@ void handleLoadCommand(char* s) {
              fread(tempbuff,1,len,fp);
              bytesRead+=len;
 
-             printf("    %s\n",tempbuff);
+             //printf("    %s\n",tempbuff);
         }
         else if(blocktype == 0x07) {
              fread(tempbuff,1,1,fp);
@@ -779,7 +787,7 @@ void handleLoadCommand(char* s) {
     }
     
     fclose(fp);
-    sendResponse("LOADCMD_DONE");
+    sendResponse("GET_DONE");
 }
 
 
@@ -842,10 +850,11 @@ int main(int argc,char** argv)
         	bRunning = false;
             printf("Goodbye cruel world.");
         }
-        else if(startsWith("LOADCMD",workbuff)) {
-            printf("Load Command requested...\n");
+        else if(startsWith("GET",workbuff)) {
+            printf("Get Command requested...\n");
+            printf("    %s\n",workbuff);
             handleLoadCommand(workbuff);
-            printf("Load Command completed.\n");
+            printf("Get Command completed.\n\n");
         }
         else if(startsWith("OK",workbuff)) {
             printf("Received spurious OK command.  Ignoring.\n");
