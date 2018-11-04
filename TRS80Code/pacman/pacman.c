@@ -1,6 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "notedata.c"
+
+#ifdef __APPLE__
+// compiled under GCC-8 rather than ZCC
+    #define GCC_COMPILED
+#endif
+
+#ifdef GCC_COMPILED
+#include <SDL2/SDL.h>
+#endif
 
 
 // port addresses
@@ -58,11 +68,15 @@
 /* 0x82 = JOY 1 when IN */
 /* 0x83 = SOUND 2 when OUT */
 /* 0x83 = JOY 2 when IN */
+#ifndef GCC_COMPILED
 __sfr __at 0x80 PORTX80;
 __sfr __at 0x81 PORTX81;
 __sfr __at 0x82 PORTX82;
 __sfr __at 0x83 PORTX83;
-
+#else
+char screen_buffer[65535];
+char VDPRegisters[8];
+#endif
 
 // graphicsSetup constants
 #define GRAPHICSMODE1 0
@@ -113,28 +127,51 @@ spriteAttr sprAttr[32];         // sprite struct array
    *************************************************************
 */
 unsigned char getRRegister() {
+#ifdef GCC_COMPILED
+    return rand() % 256;
+#else
     #pragma asm
     ld a,r
     ld h,0
     ld l,a
     #pragma endasm
+#endif
 }
+
+
+#ifdef GCC_COMPILED
+void updateEmulatedVDPScreen() {
+    #warning updateEmulatedVDPScreen() is undefined
+    printf("updateEmulatedVDPScreen() is undefined\n");  
+}
+#endif
+
 
 /* *************************************************************
    | VDP register set (low level register change)              |
    *************************************************************
 */
 void setVDPRegister(unsigned char reg,unsigned char dat) {
+#ifdef GCC_COMPILED
+    VDPRegisters[reg] = dat;
+    updateEmulatedVDPScreen();
+#else
     PORTX81 = dat;
     reg=reg+128;
     PORTX81 = reg;
+#endif
 }
+
 
 /* *************************************************************
    | Set byte in VDP RAM                                       |
    *************************************************************
 */
 void setVDPRAM(unsigned int addr, unsigned char dat) {
+#ifdef GCC_COMPILED
+    screen_buffer[addr] = dat;
+    updateEmulatedVDPScreen();
+#else
     static unsigned int addr_2;
     static unsigned int addr_1;
     
@@ -148,6 +185,7 @@ void setVDPRAM(unsigned int addr, unsigned char dat) {
     PORTX81 = (unsigned char)addr_1;
     PORTX81 = (unsigned char)addr_2;
     PORTX80 = dat;
+#endif
 }
 
 /* *************************************************************
@@ -155,6 +193,9 @@ void setVDPRAM(unsigned int addr, unsigned char dat) {
    *************************************************************
 */
 unsigned char getVDPRAM(unsigned int addr) {
+#ifdef GCC_COMPILED
+    return screen_buffer[addr];
+#else
     static unsigned int addr_2;
     static unsigned int addr_1;
     
@@ -164,6 +205,7 @@ unsigned char getVDPRAM(unsigned int addr) {
     PORTX81 = (unsigned char)addr_1;
     PORTX81 = (unsigned char)addr_2;
     return PORTX80;
+#endif
 }
 
 /* *************************************************************
@@ -171,10 +213,15 @@ unsigned char getVDPRAM(unsigned int addr) {
    *************************************************************
 */
 void soundOut(unsigned char LeftOrRight, unsigned char dat) {
+#ifdef GCC_COMPILED
+    #warning soundOut() is undefined for GCC_COMPILED mode
+    printf("soundOut() is undefined for GCC_COMPILED mode\n");
+#else
     if(LeftOrRight == LEFT_POS) 
         PORTX82 = dat;
     else
         PORTX83 = dat; 
+#endif
 }
 
 /* *************************************************************
@@ -182,10 +229,27 @@ void soundOut(unsigned char LeftOrRight, unsigned char dat) {
    *************************************************************
 */
 unsigned char getJoystick(unsigned char LeftOrRight) {
+#ifdef GCC_COMPILED
+    char ret=0;
+    SDL_PumpEvents();
+    Uint8 *keystates  = SDL_GetKeyboardState( NULL );
+    if(keystates[SDL_SCANCODE_UP])
+      return J_N;
+    if(keystates[SDL_SCANCODE_DOWN])
+      return J_S;
+    if(keystates[SDL_SCANCODE_LEFT])
+      return J_W;
+    if(keystates[SDL_SCANCODE_RIGHT])
+      return J_E;
+    if(keystates[SDL_SCANCODE_RETURN])
+      return J_BUTTON;
+    return 0;
+#else
     if(LeftOrRight == LEFT_POS)
         return PORTX83;
     else
         return PORTX82;
+#endif
 }
 
 /* *************************************************************
@@ -283,8 +347,7 @@ void setPatterns() {
    unsigned char buf[17];
    
    for(i=0;i<256;i++)
-       setCharPattern(i,"0000000000000000");
-   
+       setCharPattern(i,"0000000000000000");   
 
                                         //     SHAPE  
    SETPATTERN('a',"8181818181818181");  //      | |   
@@ -855,11 +918,15 @@ void checkControls() {
 
 
 void hold(unsigned int x) {
+#ifdef GCC_COMPILED
+    SDL_Delay(x >> 3);
+#else
     for(unsigned int y = 0; y<x;y++) {
       #pragma asm
       nop
       #pragma endasm
     }
+#endif
 }
 
 
@@ -889,8 +956,16 @@ void rest(unsigned int x) {
 #define SIXTYFOURTHNOTE 125
 #define ONETWENTYEIGHTHNOTE 63
 #define TWOFIFTYSIXTHNOTE 32
-#define playLeft(NOTE) PORTX82 = notes[NOTE].b1; PORTX82 = notes[NOTE].b2;
-#define playRight(NOTE) PORTX83 = notes[NOTE].b1; PORTX83 = notes[NOTE].b2;
+
+
+#ifdef GCC_COMPILED
+    #define playLeft(NOTE)     printf("playLeft(NOTE) is undefined for GCC_COMPILED mode\n");
+    #define playRight(NOTE)    printf("playRight(NOTE) is undefined for GCC_COMPILED mode\n");
+#else
+    #define playLeft(NOTE) PORTX82 = notes[NOTE].b1; PORTX82 = notes[NOTE].b2;
+    #define playRight(NOTE) PORTX83 = notes[NOTE].b1; PORTX83 = notes[NOTE].b2;
+#endif
+
 void introMusic() {
   volumeup();
 
@@ -942,6 +1017,40 @@ void introMusic() {
 }
 
 
+#ifdef GCC_COMPILED
+    #define SCREEN_WIDTH 640
+    #define SCREEN_HEIGHT 480
+
+    SDL_Window* window = NULL;
+    SDL_Surface* screenSurface = NULL;
+
+    void SDLSetup() {
+       if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("could not initialize sdl2: %s\n", SDL_GetError());
+        exit(-2);
+       }
+
+       window = SDL_CreateWindow(
+          "PACMAN",
+          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+          SCREEN_WIDTH, SCREEN_HEIGHT,
+          SDL_WINDOW_SHOWN
+       );
+       if (window == NULL) {
+         printf("could not create window: %s\n", SDL_GetError());
+         exit(-3);
+       }
+       screenSurface = SDL_GetWindowSurface(window);
+       SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0x0, 0x0, 0x0));
+       SDL_UpdateWindowSurface(window);
+    }
+
+    void SDLShutdown() {
+       SDL_DestroyWindow(window);
+       SDL_Quit();
+    }
+#endif
+
 int main()
 {
    int j;
@@ -951,6 +1060,12 @@ int main()
    char buf[33];
 
    bRunning = TRUE;
+
+
+#ifdef GCC_COMPILED
+   SDLSetup();
+#endif
+
 
    clearTRSScreen();
 
@@ -995,7 +1110,7 @@ int main()
    printf("7...");
    drawMaze();
 
-   printf("8...");
+   printf("8..."); 
 
    setSpritePattern(0, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFEFFFF80FFFFFFFEFEFCF8E0"); // PACMAN, mouth closed (east)
    setSpritePattern(1, "071F3F7F7FFFFFFFFFFFFF7F7F3F1F07E0F8FCDEFFFCE080E0FCFFFEFEFCF8E0"); // PACMAN, mouth open 1 (east)
@@ -1031,5 +1146,10 @@ int main()
    }
 
    printf("DONE!");
+
+#ifdef GCC_COMPILED
+   SDLShutdown();
+#endif
+
    exit(-1);
 }

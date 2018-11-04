@@ -149,8 +149,8 @@ RETURNCODE getSerialDevices(char* desiredDevice) {
     		if(startsWith("TTY.",buf)) {
     			if(stristr(buf,"BLUE") == NULL) {
 	    			strcat(serialDeviceNames[iSerialDeviceCtr], ep->d_name);
-                    if(stricmp(desiredDevice, buf, strlen(desiredDevice)) == 0)
-                    	iActiveDevice = iSerialDeviceCtr;
+            if(stricmp(desiredDevice, buf, strlen(desiredDevice)) == 0)
+                iActiveDevice = iSerialDeviceCtr;
 	    			iSerialDeviceCtr++;
 	    			if(iSerialDeviceCtr > 255) {
 	    				closedir(dp);
@@ -589,6 +589,11 @@ void handleLoadCommand(char* s) {
              while(stricmp(workbuff, "RESEND", strlen(workbuff)) == 0 && iResendCtr < 5);
              if(iResendCtr >= 5) {
                 printf("  too many resends.  Forcing stop.\n");
+                break;
+             }
+
+             if(stricmp(workbuff, "WRITE_FAILED_HIT_CLIENT_BUFFER", strlen(workbuff)) == 0) {
+                printf("  WRITE_FAILED_HIT_CLIENT_BUFFER while sending object blocks, terminating GET request.");
                 break;
              }
 
